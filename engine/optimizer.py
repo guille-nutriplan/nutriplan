@@ -240,6 +240,22 @@ def optimizar_dieta(
         A_ub_rows.append(-col_g('FIBRA_g'))
         b_ub_rows.append(-fibra_min)
 
+    # ── Zinc, Yodo, Selenio ──────────────────────────────────────────────────
+    zinc_min = req.get('zinc_min', 0)
+    if zinc_min > 0 and 'ZINC_g' in df.columns:
+        A_ub_rows.append(-col_g('ZINC_g'))
+        b_ub_rows.append(-zinc_min)
+
+    yodo_min = req.get('yodo_min', 0)
+    if yodo_min > 0 and 'YODO_g' in df.columns:
+        A_ub_rows.append(-col_g('YODO_g'))
+        b_ub_rows.append(-yodo_min)
+
+    selenio_min = req.get('selenio_min', 0)
+    if selenio_min > 0 and 'SELENIO_g' in df.columns:
+        A_ub_rows.append(-col_g('SELENIO_g'))
+        b_ub_rows.append(-selenio_min)
+
     # ── FIX: Peso total diario (saciedad) ─────────────────────────────────────
     rango_key = req.get('_rango_key', '')
     factor_peso = FACTOR_PESO_ETARIO.get(rango_key, 1.0)
@@ -311,6 +327,12 @@ def optimizar_dieta(
     ]
     if 'FIBRA_g' in df_res.columns:
         nutrientes_calc.append(('FIBRA', 'FIBRA_g'))
+    if 'ZINC_g' in df_res.columns:
+        nutrientes_calc.append(('ZINC', 'ZINC_g'))
+    if 'YODO_g' in df_res.columns:
+        nutrientes_calc.append(('YODO', 'YODO_g'))
+    if 'SELENIO_g' in df_res.columns:
+        nutrientes_calc.append(('SELENIO', 'SELENIO_g'))
 
     for col, col_g_name in nutrientes_calc:
         df_res[f'APORTE_{col}'] = df_res['GRAMOS'] * np.nan_to_num(
@@ -333,6 +355,9 @@ def optimizar_dieta(
         'vit_b1_mg':     df_res['APORTE_VIT_B1'].sum(),
         'vit_b2_mg':     df_res['APORTE_VIT_B2'].sum(),
         'fibra_g':       df_res['APORTE_FIBRA'].sum() if 'APORTE_FIBRA' in df_res.columns else 0,
+        'zinc_mg':       df_res['APORTE_ZINC'].sum() if 'APORTE_ZINC' in df_res.columns else 0,
+        'yodo_ug':       df_res['APORTE_YODO'].sum() if 'APORTE_YODO' in df_res.columns else 0,
+        'selenio_ug':    df_res['APORTE_SELENIO'].sum() if 'APORTE_SELENIO' in df_res.columns else 0,
         'gramos_total':  df_res['GRAMOS'].sum(),
     }
 

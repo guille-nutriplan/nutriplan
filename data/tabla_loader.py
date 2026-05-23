@@ -370,6 +370,26 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     df['FIBRA']   = df.apply(lambda r: _estimar_fibra(r['ALIMENTO'], r['GRUPO']), axis=1)
     df['FIBRA_g'] = df['FIBRA'] / 100.0
 
+    # ── OLIGOELEMENTOS estimados ──────────────────────────────────────────────
+    def _estimar_oe(alimento, grupo, por_alimento, por_grupo):
+        al = alimento.lower().strip()
+        for kw, val in por_alimento.items():
+            if kw in al:
+                return val
+        return por_grupo.get(grupo, 0.0)
+
+    df['ZINC']      = df.apply(lambda r: _estimar_oe(r['ALIMENTO'], r['GRUPO'],
+                               ZINC_ESTIMADO_ALIMENTO, ZINC_ESTIMADO_GRUPO), axis=1)
+    df['ZINC_g']    = df['ZINC'] / 100.0
+
+    df['YODO']      = df.apply(lambda r: _estimar_oe(r['ALIMENTO'], r['GRUPO'],
+                               YODO_ESTIMADO_ALIMENTO, YODO_ESTIMADO_GRUPO), axis=1)
+    df['YODO_g']    = df['YODO'] / 100.0
+
+    df['SELENIO']   = df.apply(lambda r: _estimar_oe(r['ALIMENTO'], r['GRUPO'],
+                               SELENIO_ESTIMADO_ALIMENTO, SELENIO_ESTIMADO_GRUPO), axis=1)
+    df['SELENIO_g'] = df['SELENIO'] / 100.0
+
     # ── Nombre completo del alimento ──────────────────────────────────────────
     df['NOMBRE_COMPLETO'] = df.apply(
         lambda r: f"{r['ALIMENTO']} ({r['ESTADO']})" if r['ESTADO'] else r['ALIMENTO'],
@@ -490,4 +510,107 @@ FIBRA_ESTIMADA_ALIMENTO = {
     'almendra':     12.5,
     'mani':         8.5,
     'nuez':         6.7,
+}
+
+# ─── Oligoelementos estimados (g/100g) ───────────────────────────────────────
+# Fuente: USDA FoodData Central SR Legacy + OPS/OMS Tablas de composición
+# Unidades: mg/100g para Zinc y Manganeso, µg/100g para Yodo y Selenio
+# Estos valores son promedios por grupo — serán reemplazados por valores
+# reales cuando se implemente el enriquecimiento desde USDA API (Opción B)
+
+ZINC_ESTIMADO_GRUPO = {       # mg/100g
+    'Cereales':    1.0,
+    'Leguminosas': 1.5,
+    'Hortalizas':  0.3,
+    'Frutas':      0.1,
+    'FrutosSecos': 3.0,
+    'Lacteos':     0.4,
+    'Huevos':      1.1,
+    'Aceites':     0.0,
+    'Azucares':    0.1,
+    'Pescados':    0.9,
+    'Carnes':      4.5,
+    'Embutidos':   2.0,
+    'Aves':        2.0,
+}
+
+ZINC_ESTIMADO_ALIMENTO = {    # mg/100g — overrides de grupo
+    'arroz':       0.6,
+    'pan':         0.7,
+    'avena':       3.6,
+    'lenteja':     3.3,
+    'poroto':      3.0,
+    'garbanzo':    3.4,
+    'almendra':    3.1,
+    'mani':        3.3,
+    'nuez':        2.7,
+    'queso':       3.5,
+    'leche':       0.4,
+    'pollo':       1.8,
+    'bife':        6.3,
+    'hígado':      6.0,
+    'atun':        0.7,
+    'merluza':     0.4,
+    'espinaca':    0.5,
+    'papa':        0.3,
+    'zanahoria':   0.2,
+    'tomate':      0.2,
+    'banana':      0.2,
+    'naranja':     0.1,
+}
+
+YODO_ESTIMADO_GRUPO = {       # µg/100g
+    'Cereales':    10,
+    'Leguminosas':  5,
+    'Hortalizas':   3,
+    'Frutas':       2,
+    'FrutosSecos':  2,
+    'Lacteos':     50,    # leche es la principal fuente dietaria de yodo
+    'Huevos':      25,
+    'Aceites':      1,
+    'Azucares':     2,
+    'Pescados':   100,    # pescados y mariscos — mayor fuente natural
+    'Carnes':       5,
+    'Embutidos':    8,
+    'Aves':         5,
+}
+
+YODO_ESTIMADO_ALIMENTO = {    # µg/100g
+    'leche':       44,
+    'yogur':       38,
+    'queso':       36,
+    'merluza':     90,
+    'atun':       120,
+    'sardina':    135,
+    'bacalao':    110,
+    'huevo':       26,
+    'pan':         12,    # sal yodada usada en panificación
+}
+
+SELENIO_ESTIMADO_GRUPO = {    # µg/100g
+    'Cereales':   10,
+    'Leguminosas': 6,
+    'Hortalizas':  1,
+    'Frutas':      1,
+    'FrutosSecos': 4,
+    'Lacteos':     4,
+    'Huevos':     20,
+    'Aceites':     0,
+    'Azucares':    1,
+    'Pescados':   30,
+    'Carnes':     14,
+    'Embutidos':  12,
+    'Aves':       17,
+}
+
+SELENIO_ESTIMADO_ALIMENTO = { # µg/100g
+    'atun':       90,
+    'merluza':    36,
+    'sardina':    53,
+    'pollo':      17,
+    'bife':       14,
+    'huevo':      20,
+    'arroz':       9,
+    'avena':      34,
+    'nuez brasil':1917,   # la nuez de Brasil es la fuente más rica conocida
 }

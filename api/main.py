@@ -93,6 +93,9 @@ class AportesNutricionales(BaseModel):
     vit_b2_mg:    float
     fibra_g:      float
     gramos_total: float
+    zinc_mg:      float
+    yodo_ug:      float
+    selenio_ug:   float
 
 
 class ReqOMS(BaseModel):
@@ -109,6 +112,9 @@ class ReqOMS(BaseModel):
     vit_b1_min:   float
     vit_b2_min:   float
     fibra_min:    float
+    zinc_min:     float
+    yodo_min:     float
+    selenio_min:  float
 
 
 class PlanResponse(BaseModel):
@@ -238,6 +244,9 @@ def calcular_plan(body: PlanRequest):
                 vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
                 vit_b2_min=req["vit_b2_min"],
                 fibra_min=req.get("fibra_min", 0),
+                zinc_min=req.get("zinc_min", 0),
+                yodo_min=req.get("yodo_min", 0),
+                selenio_min=req.get("selenio_min", 0),
             ),
             costo_diario=0,
             costo_mensual=0,
@@ -279,6 +288,9 @@ def calcular_plan(body: PlanRequest):
             vit_b2_mg=round(ap["vit_b2_mg"], 2),
             fibra_g=round(ap.get("fibra_g", 0), 1),
             gramos_total=round(ap.get("gramos_total", 0), 0),
+            zinc_mg=round(ap.get("zinc_mg", 0), 2),
+            yodo_ug=round(ap.get("yodo_ug", 0), 1),
+            selenio_ug=round(ap.get("selenio_ug", 0), 1),
         ),
         req_oms=ReqOMS(
             energia_min=req["energia_min"], energia_max=req["energia_max"],
@@ -289,6 +301,9 @@ def calcular_plan(body: PlanRequest):
             vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
             vit_b2_min=req["vit_b2_min"],
                 fibra_min=req.get("fibra_min", 0),
+                zinc_min=req.get("zinc_min", 0),
+                yodo_min=req.get("yodo_min", 0),
+                selenio_min=req.get("selenio_min", 0),
         ),
         costo_diario=round(resultado.costo_total, 0),
         costo_mensual=round(resultado.costo_mensual, 0),
