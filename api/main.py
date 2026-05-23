@@ -108,6 +108,7 @@ class ReqOMS(BaseModel):
     vit_c_min:    float
     vit_b1_min:   float
     vit_b2_min:   float
+    fibra_min:    float
 
 
 class PlanResponse(BaseModel):
@@ -236,6 +237,7 @@ def calcular_plan(body: PlanRequest):
                 hierro_min=req["hierro_min"], vit_a_min_ui=req["vit_a_min_ui"],
                 vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
                 vit_b2_min=req["vit_b2_min"],
+                fibra_min=req.get("fibra_min", 0),
             ),
             costo_diario=0,
             costo_mensual=0,
@@ -286,6 +288,7 @@ def calcular_plan(body: PlanRequest):
             hierro_min=req["hierro_min"], vit_a_min_ui=req["vit_a_min_ui"],
             vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
             vit_b2_min=req["vit_b2_min"],
+                fibra_min=req.get("fibra_min", 0),
         ),
         costo_diario=round(resultado.costo_total, 0),
         costo_mensual=round(resultado.costo_mensual, 0),
