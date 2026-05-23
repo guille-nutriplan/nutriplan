@@ -326,6 +326,27 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
         axis=1
     )
 
+    # ── Exclusión de ingredientes crudos no comestibles directamente ──────────
+    def _es_materia_prima(alimento: str, estado: str) -> bool:
+        alimento_l = alimento.lower().strip()
+        estado_l   = estado.lower().strip() if estado else ''
+        # Por estado
+        for est_excl in EXCLUIR_ESTADOS_CRUDOS:
+            if est_excl in estado_l:
+                return True
+        # Por nombre completo
+        nombre_completo = f"{alimento_l} ({estado_l})" if estado_l else alimento_l
+        if nombre_completo in EXCLUIR_MATERIAS_PRIMAS:
+            return True
+        if alimento_l in EXCLUIR_MATERIAS_PRIMAS:
+            return True
+        return False
+
+    mask_mp = df.apply(
+        lambda r: _es_materia_prima(r['ALIMENTO'], r['ESTADO']), axis=1
+    )
+    df.loc[mask_mp, 'DISPONIBLE'] = False
+
     # ── FIX 3: factor de precio para formas concentradas ─────────────────────
     df['FACTOR_PRECIO'] = df.apply(
         lambda r: _factor_precio(r['ESTADO'], r['GRUPO']),
@@ -335,6 +356,19 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     # ── Columnas por gramo (para el LP) ──────────────────────────────────────
     for col in NUTRIENT_COLS:
         df[f'{col}_g'] = df[col] / 100.0
+
+    # ── FIBRA estimada (g/100g) ───────────────────────────────────────────────
+    def _estimar_fibra(alimento: str, grupo: str) -> float:
+        alimento_l = alimento.lower().strip()
+        # Buscar override específico por nombre
+        for keyword, fibra in FIBRA_ESTIMADA_ALIMENTO.items():
+            if keyword in alimento_l:
+                return fibra
+        # Fallback al promedio del grupo
+        return FIBRA_ESTIMADA_GRUPO.get(grupo, 0.0)
+
+    df['FIBRA']   = df.apply(lambda r: _estimar_fibra(r['ALIMENTO'], r['GRUPO']), axis=1)
+    df['FIBRA_g'] = df['FIBRA'] / 100.0
 
     # ── Nombre completo del alimento ──────────────────────────────────────────
     df['NOMBRE_COMPLETO'] = df.apply(
@@ -383,3 +417,77 @@ def resumen_tabla(df: pd.DataFrame) -> None:
 if __name__ == '__main__':
     df = cargar_tabla('tabla_composicion_alimentos.xlsx')
     resumen_tabla(df)
+
+# ─── Exclusión de ingredientes que requieren procesamiento ────────────────────
+# Estos alimentos existen en la tabla pero no se consumen directamente —
+# son materias primas que necesitan cocción o elaboración industrial.
+# El LP los sobreusa porque son baratos y calóricamente densos.
+EXCLUIR_ESTADOS_CRUDOS = {
+    'grano',      # trigo grano, cebada grano, centeno grano
+}
+
+# Alimentos específicos que son materias primas no consumibles directamente
+EXCLUIR_MATERIAS_PRIMAS = {
+    'harina de trigo',
+    'harina de maiz',
+    'harina de centeno',
+    'harina de cebada',
+    'harina de avena',
+    'salvado de trigo',
+    'salvado de avena',
+    'germen de trigo',
+    'trigo (grano)',
+    'cebada (grano)',
+    'centeno (grano)',
+    'maiz (grano)',
+    'avena (grano)',
+}
+
+# ─── Fibra estimada por grupo (g/100g) ───────────────────────────────────────
+# La tabla original no tiene fibra. Usamos estimaciones por grupo basadas
+# en valores promedio de la base USDA FoodData Central.
+# Es una aproximación conservadora — mejor que nada para el LP.
+FIBRA_ESTIMADA_GRUPO = {
+    'Cereales':    3.5,   # varía mucho: arroz blanco 0.4g, avena 10g → promedio
+    'Leguminosas': 8.0,   # lentejas, porotos: 6-10g
+    'Hortalizas':  2.5,   # promedio verduras frescas
+    'Frutas':      2.0,   # promedio frutas frescas
+    'FrutosSecos': 6.5,   # almendras, nueces: 5-8g
+    'Lacteos':     0.0,
+    'Huevos':      0.0,
+    'Aceites':     0.0,
+    'Azucares':    0.2,
+    'Pescados':    0.0,
+    'Carnes':      0.0,
+    'Embutidos':   0.0,
+    'Aves':        0.0,
+}
+
+# Ajuste por alimento específico (override del grupo)
+FIBRA_ESTIMADA_ALIMENTO = {
+    'arroz':        0.4,
+    'arroz blanco': 0.4,
+    'papa':         2.2,
+    'patata':       2.2,
+    'zapallo':      1.0,
+    'calabaza':     1.0,
+    'banana':       2.6,
+    'manzana':      2.4,
+    'naranja':      2.4,
+    'zanahoria':    2.8,
+    'espinaca':     2.2,
+    'acelga':       1.6,
+    'lechuga':      1.3,
+    'tomate':       1.2,
+    'lenteja':      8.0,
+    'poroto':       7.5,
+    'garbanzo':     7.6,
+    'soja':         6.0,
+    'pan':          2.7,
+    'pan integral': 6.0,
+    'avena':        10.0,
+    'chocolate':    3.4,
+    'almendra':     12.5,
+    'mani':         8.5,
+    'nuez':         6.7,
+}

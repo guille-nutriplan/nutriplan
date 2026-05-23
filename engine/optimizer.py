@@ -3,24 +3,13 @@ optimizer.py
 Motor de optimización de dieta por programación lineal.
 
 Resuelve:
-  min  Σ precio_g[i] · x[i]          (minimizar costo)
+  min  Σ precio_g[i] · x[i]
   s.t.
-    Σ CAL_g[i]    · x[i] >= energia_min
-    Σ CAL_g[i]    · x[i] <= energia_max
-    Σ PR_g[i]     · x[i] >= proteinas_min
-    Σ GR_g[i]     · x[i] >= grasas_min
-    Σ GR_g[i]     · x[i] <= grasas_max
-    Σ HC_g[i]     · x[i] >= hc_min
-    Σ CA_g[i]     · x[i] >= calc_min
-    Σ FE_g[i]     · x[i] >= hierro_min
-    Σ VIT_A_g[i]  · x[i] >= vit_a_min
-    Σ VIT_C_g[i]  · x[i] >= vit_c_min
-    Σ VIT_B1_g[i] · x[i] >= vit_b1_min
-    Σ VIT_B2_g[i] · x[i] >= vit_b2_min
-    Σ x[i] para grupo g >= minimo_grupo[g]   ∀g
-    0 <= x[i] <= max_por_alimento[i]          ∀i
-
-donde x[i] = gramos del alimento i en el día.
+    Nutrientes mínimos/máximos OMS
+    Grupos mínimos/máximos
+    Peso total mínimo/máximo (saciedad)
+    Fibra mínima (OMS)
+    0 <= x[i] <= max_por_alimento[i]
 """
 
 import numpy as np
@@ -32,7 +21,6 @@ from typing import Optional
 
 # ─── Parámetros del optimizador ───────────────────────────────────────────────
 
-# Máximos de consumo diario por grupo (g/día) — evita soluciones degeneradas
 MAX_POR_GRUPO = {
     'Cereales':    400,
     'Leguminosas': 200,
@@ -40,7 +28,7 @@ MAX_POR_GRUPO = {
     'Frutas':      400,
     'FrutosSecos': 100,
     'Lacteos':     500,
-    'Huevos':      150,   # ≈ 2 huevos grandes
+    'Huevos':      150,
     'Aceites':      60,
     'Azucares':    100,
     'Pescados':    300,
@@ -49,7 +37,6 @@ MAX_POR_GRUPO = {
     'Aves':        300,
 }
 
-# Mínimos de consumo diario por grupo (g/día) — diversidad mínima
 MIN_POR_GRUPO = {
     'Cereales':    50,
     'Leguminosas': 20,
@@ -66,20 +53,45 @@ MIN_POR_GRUPO = {
     'Aves':         0,
 }
 
-# Mínimo combinado de proteínas animales (Carnes + Aves + Pescados + Huevos)
-MIN_PROTEINA_ANIMAL = 30   # g/día (cero para veganos)
+MIN_PROTEINA_ANIMAL = 30
+
+# ─── FIX: Peso total diario (saciedad) ───────────────────────────────────────
+# Una dieta adulta realista tiene entre 1.200 y 2.800g de alimentos sólidos/día.
+# Esto fuerza al LP a elegir mayor volumen y variedad de alimentos.
+MIN_GRAMOS_TOTAL = 1200   # g/día — mínimo para saciedad real
+MAX_GRAMOS_TOTAL = 2800   # g/día — evita soluciones con cantidades absurdas
+
+# Ajuste por rango etario (factor sobre el default adulto)
+FACTOR_PESO_ETARIO = {
+    '0-6m':        0.25,
+    '6-12m':       0.35,
+    '1-3':         0.50,
+    '4-6':         0.60,
+    '7-9':         0.70,
+    '10-13M':      0.80,
+    '10-13F':      0.78,
+    '14-17M':      0.95,
+    '14-17F':      0.82,
+    '18-29M':      1.00,
+    '18-29F':      0.85,
+    '30-59M':      1.00,
+    '30-59F':      0.85,
+    '60+M':        0.90,
+    '60+F':        0.80,
+    'embarazada':  0.95,
+    'lactante_madre': 1.05,
+}
 
 
 @dataclass
 class FiltrosDieta:
-    celiaco: bool = False
+    celiaco:     bool = False
     sin_lactosa: bool = False
     vegetariano: bool = False
-    vegano: bool = False
-    alergenos: list[str] = field(default_factory=list)
+    vegano:      bool = False
+    alergenos:   list[str] = field(default_factory=list)
 
     def __post_init__(self):
-        # Vegano implica vegetariano y sin lactosa
         if self.vegano:
             self.vegetariano = True
             self.sin_lactosa = True
@@ -87,27 +99,23 @@ class FiltrosDieta:
 
 @dataclass
 class ResultadoOptimizacion:
-    exito: bool
-    mensaje: str
-    alimentos: pd.DataFrame          # Alimentos seleccionados con gramos y aportes
-    aportes: dict                    # Totales de nutrientes
-    costo_total: float               # ARS/día
-    costo_mensual: float             # ARS/mes
-    fuente_precios: str              # 'SEPA' o 'referencia_local'
-    req: dict                        # Requerimientos OMS aplicados
+    exito:          bool
+    mensaje:        str
+    alimentos:      pd.DataFrame
+    aportes:        dict
+    costo_total:    float
+    costo_mensual:  float
+    fuente_precios: str
+    req:            dict
     infactibilidad_detalle: Optional[str] = None
 
 
 def _aplicar_filtros(df: pd.DataFrame, filtros: FiltrosDieta) -> pd.DataFrame:
-    """Filtra el DataFrame de alimentos según restricciones dietarias."""
     df = df.copy()
 
     if filtros.celiaco:
-        # Excluir por nombre de ingrediente explícito
         mask_ingr = df['ALIMENTO'].str.lower().str.contains(
             r'trigo|cebada|centeno|avena|sémola|semola', na=False, regex=True)
-        # Excluir preparaciones implícitamente de gluten en el grupo Cereales
-        # (macarrones, fideos, pasta, galletas, pan — excepto arroz y maíz)
         mask_gluten_cereales = (
             (df['GRUPO'] == 'Cereales') &
             df['ALIMENTO'].str.lower().str.contains(
@@ -117,7 +125,6 @@ def _aplicar_filtros(df: pd.DataFrame, filtros: FiltrosDieta) -> pd.DataFrame:
                 na=False, regex=True
             )
         )
-        # Pan: excluir todos excepto pan de maíz y pan de arroz
         mask_pan_gluten = (
             (df['GRUPO'] == 'Cereales') &
             df['ALIMENTO'].str.lower().str.contains(r'\bpan\b', na=False, regex=True) &
@@ -153,21 +160,6 @@ def optimizar_dieta(
     min_por_grupo: Optional[dict] = None,
     max_por_grupo: Optional[dict] = None,
 ) -> ResultadoOptimizacion:
-    """
-    Ejecuta la optimización LP para minimizar costo cubriendo requerimientos OMS.
-
-    Parameters
-    ----------
-    df_alimentos : DataFrame con nutrientes por gramo y precio_g
-    req          : dict de requerimientos (de who_requirements.WHO_REQUIREMENTS)
-    filtros      : FiltrosDieta (None = sin restricciones)
-    min/max_por_grupo : override de los defaults globales
-
-    Returns
-    -------
-    ResultadoOptimizacion
-    """
-    import re   # importar aquí para evitar circular en módulo
 
     if filtros is None:
         filtros = FiltrosDieta()
@@ -175,7 +167,6 @@ def optimizar_dieta(
     _min_grupo = {**MIN_POR_GRUPO, **(min_por_grupo or {})}
     _max_grupo = {**MAX_POR_GRUPO, **(max_por_grupo or {})}
 
-    # Ajustar mínimos de grupos excluidos por filtros
     if filtros.vegetariano or filtros.vegano:
         for g in ['Carnes', 'Aves', 'Pescados', 'Embutidos']:
             _min_grupo[g] = 0
@@ -185,38 +176,28 @@ def optimizar_dieta(
     if filtros.sin_lactosa:
         _min_grupo['Lacteos'] = 0
 
-    # ── Aplicar filtros de dieta ──────────────────────────────────────────────
+    # ── Filtros ───────────────────────────────────────────────────────────────
     df = _aplicar_filtros(df_alimentos, filtros)
 
-    # ── FIX 2: excluir alimentos no disponibles en supermercados ─────────────
     if 'DISPONIBLE' in df.columns:
         df = df[df['DISPONIBLE'] == True]
 
-    # ── FIX 3: aplicar factor de precio a formas concentradas/secas ──────────
     df = df.copy()
     if 'FACTOR_PRECIO' in df.columns:
         df['PRECIO_g'] = df['PRECIO_g'] * df['FACTOR_PRECIO']
         df['PRECIO_100G'] = df['PRECIO_g'] * 100
 
-    # ── Sanidad de nutrientes: cap de contribución por gramo ─────────────────
-    # Evita que errores de la tabla (ej: achicoria tostada con 58 mg Fe/100g)
-    # distorsionen la solución aunque hayan pasado el filtro de exclusión.
-    # Los caps son generosos — ningún alimento real los debería superar.
-    CAPS_NUTRIENTE_POR_100G = {
-        'FE_g':    0.25,    # 25 mg Fe / 100g (hígado vacuno real: ~10-20 mg)
-        'CA_g':    1.5,     # 150 mg Ca / 100g (queso duro: ~1000 mg, ok)
-        'VIT_A_g': 300.0,   # 30000 UI / 100g (hígado pollo: ~15000 UI, ok)
-        'VIT_C_g': 2.0,     # 200 mg Vit C / 100g (kiwi/acerola: ~90 mg, limita exóticos)
+    # ── Caps de nutrientes (sanidad de datos) ─────────────────────────────────
+    CAPS = {
+        'FE_g':    0.25,
+        'CA_g':    1.5,
+        'VIT_A_g': 300.0,
+        'VIT_C_g': 2.0,
     }
-    for col, cap in CAPS_NUTRIENTE_POR_100G.items():
+    for col, cap in CAPS.items():
         if col in df.columns:
             df[col] = df[col].clip(upper=cap)
-            # Actualizar también la columna sin _g
-            base = col.replace('_g', '')
-            if base in df.columns:
-                df[base] = df[col] * 100
 
-    # ── Filtrar alimentos sin precio o sin calorías ───────────────────────────
     df = df.dropna(subset=['PRECIO_g', 'CAL_g'])
     df = df[df['CAL_g'] > 0]
     df = df[df['PRECIO_g'] > 0]
@@ -231,82 +212,52 @@ def optimizar_dieta(
             costo_mensual=0, fuente_precios='', req=req
         )
 
-    # ── Función objetivo: minimizar costo ─────────────────────────────────────
     c = df['PRECIO_g'].values
-
-    # ── Restricciones de nutrientes ───────────────────────────────────────────
-    # Para linprog: A_ub @ x <= b_ub
-    # Restricción >= se expresa como -A @ x <= -b
 
     A_ub_rows = []
     b_ub_rows = []
 
-    def nutriente_col(col):
-        """Devuelve vector de nutriente por gramo, reemplazando NaN por 0."""
-        return np.nan_to_num(df[col].values, nan=0.0)
+    def col_g(col):
+        return np.nan_to_num(df[col].values, nan=0.0) if col in df.columns else np.zeros(n)
 
-    # Energía mínima
-    A_ub_rows.append(-nutriente_col('CAL_g'))
-    b_ub_rows.append(-req['energia_min'])
+    # ── Restricciones nutricionales ───────────────────────────────────────────
+    A_ub_rows.append(-col_g('CAL_g'));    b_ub_rows.append(-req['energia_min'])
+    A_ub_rows.append( col_g('CAL_g'));    b_ub_rows.append( req['energia_max'])
+    A_ub_rows.append(-col_g('PR_g'));     b_ub_rows.append(-req['proteinas_min'])
+    A_ub_rows.append(-col_g('GR_g'));     b_ub_rows.append(-req['grasas_min'])
+    A_ub_rows.append( col_g('GR_g'));     b_ub_rows.append( req['grasas_max'])
+    A_ub_rows.append(-col_g('HC_g'));     b_ub_rows.append(-req['hc_min'])
+    A_ub_rows.append(-col_g('CA_g'));     b_ub_rows.append(-req['calc_min'])
+    A_ub_rows.append(-col_g('FE_g'));     b_ub_rows.append(-req['hierro_min'])
+    A_ub_rows.append(-col_g('VIT_A_g')); b_ub_rows.append(-req['vit_a_min_ui'])
+    A_ub_rows.append(-col_g('VIT_C_g')); b_ub_rows.append(-req['vit_c_min'])
+    A_ub_rows.append(-col_g('VIT_B1_g'));b_ub_rows.append(-req['vit_b1_min'])
+    A_ub_rows.append(-col_g('VIT_B2_g'));b_ub_rows.append(-req['vit_b2_min'])
 
-    # Energía máxima
-    A_ub_rows.append(nutriente_col('CAL_g'))
-    b_ub_rows.append(req['energia_max'])
+    # ── Fibra ─────────────────────────────────────────────────────────────────
+    fibra_min = req.get('fibra_min', 0)
+    if fibra_min > 0 and 'FIBRA_g' in df.columns:
+        A_ub_rows.append(-col_g('FIBRA_g'))
+        b_ub_rows.append(-fibra_min)
 
-    # Proteínas mínima
-    A_ub_rows.append(-nutriente_col('PR_g'))
-    b_ub_rows.append(-req['proteinas_min'])
+    # ── FIX: Peso total diario (saciedad) ─────────────────────────────────────
+    rango_key = req.get('_rango_key', '')
+    factor_peso = FACTOR_PESO_ETARIO.get(rango_key, 1.0)
+    min_gramos = MIN_GRAMOS_TOTAL * factor_peso
+    max_gramos = MAX_GRAMOS_TOTAL * factor_peso
 
-    # Grasas mínima y máxima
-    A_ub_rows.append(-nutriente_col('GR_g'))
-    b_ub_rows.append(-req['grasas_min'])
-    A_ub_rows.append(nutriente_col('GR_g'))
-    b_ub_rows.append(req['grasas_max'])
-
-    # Hidratos mínimos
-    A_ub_rows.append(-nutriente_col('HC_g'))
-    b_ub_rows.append(-req['hc_min'])
-
-    # Calcio mínimo
-    A_ub_rows.append(-nutriente_col('CA_g'))
-    b_ub_rows.append(-req['calc_min'])
-
-    # Hierro mínimo
-    A_ub_rows.append(-nutriente_col('FE_g'))
-    b_ub_rows.append(-req['hierro_min'])
-
-    # Vitamina A mínima (en UI)
-    A_ub_rows.append(-nutriente_col('VIT_A_g'))
-    b_ub_rows.append(-req['vit_a_min_ui'])
-
-    # Vitamina C mínima (en mg)
-    A_ub_rows.append(-nutriente_col('VIT_C_g'))
-    b_ub_rows.append(-req['vit_c_min'])
-
-    # Vitamina B1 mínima (en mg)
-    A_ub_rows.append(-nutriente_col('VIT_B1_g'))
-    b_ub_rows.append(-req['vit_b1_min'])
-
-    # Vitamina B2 mínima (en mg)
-    A_ub_rows.append(-nutriente_col('VIT_B2_g'))
-    b_ub_rows.append(-req['vit_b2_min'])
+    A_ub_rows.append(-np.ones(n));   b_ub_rows.append(-min_gramos)
+    A_ub_rows.append( np.ones(n));   b_ub_rows.append( max_gramos)
 
     # ── Restricciones por grupo ───────────────────────────────────────────────
     for grupo in df['GRUPO'].unique():
-        mask_grupo = (df['GRUPO'] == grupo).astype(float).values
-
-        # Mínimo del grupo
+        mask = (df['GRUPO'] == grupo).astype(float).values
         minimo = _min_grupo.get(grupo, 0)
-        if minimo > 0:
-            A_ub_rows.append(-mask_grupo)
-            b_ub_rows.append(-minimo)
-
-        # Máximo del grupo
         maximo = _max_grupo.get(grupo, 500)
-        A_ub_rows.append(mask_grupo)
-        b_ub_rows.append(maximo)
+        if minimo > 0:
+            A_ub_rows.append(-mask); b_ub_rows.append(-minimo)
+        A_ub_rows.append(mask);  b_ub_rows.append(maximo)
 
-    # Mínimo proteína animal (si no es vegetariano/vegano)
     if not filtros.vegetariano:
         mask_animal = df['GRUPO'].isin(
             ['Carnes', 'Aves', 'Pescados', 'Huevos']
@@ -314,8 +265,7 @@ def optimizar_dieta(
         A_ub_rows.append(-mask_animal)
         b_ub_rows.append(-MIN_PROTEINA_ANIMAL)
 
-    # ── Límites por alimento individual ──────────────────────────────────────
-    # Default: (0, 300g). Para condimentos/hierbas: límite individual más bajo.
+    # ── Límites individuales ──────────────────────────────────────────────────
     from data.tabla_loader import LIMITES_INDIVIDUALES
     bounds = []
     for _, row in df.iterrows():
@@ -327,39 +277,48 @@ def optimizar_dieta(
                 break
         bounds.append((0, max_g))
 
-    # ── Resolver ─────────────────────────────────────────────────────────────
     A_ub = np.array(A_ub_rows)
     b_ub = np.array(b_ub_rows)
 
     res = linprog(
-        c=c,
-        A_ub=A_ub,
-        b_ub=b_ub,
-        bounds=bounds,
-        method='highs',
-        options={'disp': False, 'time_limit': 30.0}
+        c=c, A_ub=A_ub, b_ub=b_ub, bounds=bounds,
+        method='highs', options={'disp': False, 'time_limit': 30.0}
     )
 
     if not res.success:
-        # Intentar con restricciones relajadas (solo energía y proteínas)
-        return _intentar_fallback(df, req, filtros, res.message)
+        return ResultadoOptimizacion(
+            exito=False,
+            mensaje=(
+                f"No se encontró solución con todos los requerimientos. "
+                f"Solver: {res.message}. "
+                f"Posible causa: restricciones demasiado estrictas o "
+                f"datos nutricionales insuficientes."
+            ),
+            alimentos=pd.DataFrame(), aportes={}, costo_total=0,
+            costo_mensual=0, fuente_precios='', req=req,
+            infactibilidad_detalle=res.message,
+        )
 
     # ── Procesar resultado ────────────────────────────────────────────────────
     df_res = df.copy()
     df_res['GRAMOS'] = res.x
-
-    # Filtrar alimentos con cantidad insignificante (< 2g)
     df_res = df_res[df_res['GRAMOS'] >= 2.0].copy()
 
-    # Calcular aportes
-    for col, col_g in [('CAL', 'CAL_g'), ('PR', 'PR_g'), ('GR', 'GR_g'),
-                        ('HC', 'HC_g'), ('CA', 'CA_g'), ('FE', 'FE_g'),
-                        ('VIT_A', 'VIT_A_g'), ('VIT_C', 'VIT_C_g'),
-                        ('VIT_B1', 'VIT_B1_g'), ('VIT_B2', 'VIT_B2_g')]:
-        df_res[f'APORTE_{col}'] = df_res['GRAMOS'] * np.nan_to_num(df_res[col_g].values, nan=0.0)
+    nutrientes_calc = [
+        ('CAL', 'CAL_g'), ('PR', 'PR_g'), ('GR', 'GR_g'), ('HC', 'HC_g'),
+        ('CA', 'CA_g'), ('FE', 'FE_g'), ('VIT_A', 'VIT_A_g'),
+        ('VIT_C', 'VIT_C_g'), ('VIT_B1', 'VIT_B1_g'), ('VIT_B2', 'VIT_B2_g'),
+    ]
+    if 'FIBRA_g' in df_res.columns:
+        nutrientes_calc.append(('FIBRA', 'FIBRA_g'))
+
+    for col, col_g_name in nutrientes_calc:
+        df_res[f'APORTE_{col}'] = df_res['GRAMOS'] * np.nan_to_num(
+            df_res[col_g_name].values if col_g_name in df_res.columns else np.zeros(len(df_res)),
+            nan=0.0
+        )
 
     df_res['COSTO'] = df_res['GRAMOS'] * df_res['PRECIO_g']
-
     costo_total = df_res['COSTO'].sum()
 
     aportes = {
@@ -373,19 +332,22 @@ def optimizar_dieta(
         'vit_c_mg':      df_res['APORTE_VIT_C'].sum(),
         'vit_b1_mg':     df_res['APORTE_VIT_B1'].sum(),
         'vit_b2_mg':     df_res['APORTE_VIT_B2'].sum(),
+        'fibra_g':       df_res['APORTE_FIBRA'].sum() if 'APORTE_FIBRA' in df_res.columns else 0,
+        'gramos_total':  df_res['GRAMOS'].sum(),
     }
 
-    fuente = df_res['FUENTE'].iloc[0] if 'FUENTE' in df_res.columns else 'desconocida'
-
-    # Ordenar por grupo y gramos descendente
     df_res = df_res.sort_values(['GRUPO', 'GRAMOS'], ascending=[True, False])
+
+    cols_out = ['NOMBRE_COMPLETO', 'GRUPO', 'GRAMOS', 'COSTO',
+                'APORTE_CAL', 'APORTE_PR', 'APORTE_GR', 'APORTE_HC',
+                'APORTE_CA', 'APORTE_FE', 'APORTE_VIT_C']
+    if 'APORTE_FIBRA' in df_res.columns:
+        cols_out.append('APORTE_FIBRA')
 
     return ResultadoOptimizacion(
         exito=True,
         mensaje="Optimización exitosa",
-        alimentos=df_res[['NOMBRE_COMPLETO', 'GRUPO', 'GRAMOS', 'COSTO',
-                           'APORTE_CAL', 'APORTE_PR', 'APORTE_GR', 'APORTE_HC',
-                           'APORTE_CA', 'APORTE_FE', 'APORTE_VIT_C']],
+        alimentos=df_res[cols_out],
         aportes=aportes,
         costo_total=costo_total,
         costo_mensual=costo_total * 30,
@@ -394,59 +356,17 @@ def optimizar_dieta(
     )
 
 
-def _intentar_fallback(df, req, filtros, mensaje_error):
-    """
-    Si el LP completo es infactible, intenta con restricciones relajadas
-    para dar un resultado parcial + diagnóstico.
-    """
-    # Restricciones mínimas: solo energía y proteínas
-    req_min = {
-        'energia_min': req['energia_min'],
-        'energia_max': req['energia_max'] * 1.3,  # más tolerante
-        'proteinas_min': req['proteinas_min'] * 0.8,
-        'grasas_min': req['grasas_min'] * 0.5,
-        'grasas_max': req['grasas_max'] * 1.5,
-        'hc_min': req['hc_min'] * 0.5,
-        'calc_min': 0,
-        'hierro_min': 0,
-        'vit_a_min_ui': 0,
-        'vit_c_min': 0,
-        'vit_b1_min': 0,
-        'vit_b2_min': 0,
-    }
-
-    return ResultadoOptimizacion(
-        exito=False,
-        mensaje=(
-            f"No se encontró solución con todos los requerimientos nutricionales. "
-            f"Detalle del solver: {mensaje_error}. "
-            f"Posibles causas: precios de referencia inadecuados, "
-            f"restricciones de dieta demasiado estrictas, o "
-            f"datos nutricionales insuficientes para ciertos micronutrientes."
-        ),
-        alimentos=pd.DataFrame(),
-        aportes={},
-        costo_total=0,
-        costo_mensual=0,
-        fuente_precios='',
-        req=req,
-        infactibilidad_detalle=mensaje_error,
-    )
-
-
 def imprimir_resultado(resultado: ResultadoOptimizacion) -> None:
-    """Imprime el resultado de optimización en consola."""
     if not resultado.exito:
         print(f"\n⚠ {resultado.mensaje}")
         return
 
     req = resultado.req
-    ap = resultado.aportes
+    ap  = resultado.aportes
 
     print("\n" + "═" * 60)
     print(f"  PLAN NUTRICIONAL DIARIO ÓPTIMO")
     print("═" * 60)
-
     print(f"\n{'Alimento':<35} {'Grupo':<15} {'Gramos':>8} {'Costo $':>10}")
     print("-" * 70)
 
@@ -457,14 +377,16 @@ def imprimir_resultado(resultado: ResultadoOptimizacion) -> None:
             print(f"  {row['NOMBRE_COMPLETO']:<33} {row['GRUPO']:<15} "
                   f"{row['GRAMOS']:>7.0f}g {row['COSTO']:>9.0f}")
 
+    print(f"\n  Peso total diario: {ap['gramos_total']:.0f}g")
+
     print("\n" + "─" * 60)
-    print("  APORTES NUTRICIONALES vs REQUERIMIENTOS OMS")
+    print("  APORTES vs REQUERIMIENTOS OMS")
     print("─" * 60)
 
     def pct_ok(real, minimo, maximo=None):
-        if maximo and real > maximo * 1.02:
-            return f"⚠ EXCEDE ({real:.0f} > {maximo:.0f})"
         pct = real / minimo * 100 if minimo > 0 else 100
+        if maximo and real > maximo * 1.02:
+            return f"⚠  EXCEDE  {real:.1f} / máx {maximo:.0f}  ({pct:.0f}%)"
         icono = "✓" if pct >= 99.5 else "✗"
         return f"{icono}  {real:.1f} / {minimo:.1f}  ({pct:.0f}%)"
 
@@ -478,10 +400,11 @@ def imprimir_resultado(resultado: ResultadoOptimizacion) -> None:
     print(f"  Vitamina C (mg):   {pct_ok(ap['vit_c_mg'],      req['vit_c_min'])}")
     print(f"  Vitamina B1 (mg):  {pct_ok(ap['vit_b1_mg'],     req['vit_b1_min'])}")
     print(f"  Vitamina B2 (mg):  {pct_ok(ap['vit_b2_mg'],     req['vit_b2_min'])}")
+    if ap.get('fibra_g', 0) > 0:
+        fibra_min = req.get('fibra_min', 25)
+        print(f"  Fibra (g):         {pct_ok(ap['fibra_g'], fibra_min)}")
 
     print("\n" + "─" * 60)
-    fuente_label = "SEPA (datos.gob.ar)" if resultado.fuente_precios == 'SEPA' else "Precios de referencia"
-    print(f"  Costo diario estimado:   ${resultado.costo_total:>10,.0f}")
-    print(f"  Costo mensual estimado:  ${resultado.costo_mensual:>10,.0f}")
-    print(f"  Fuente de precios: {fuente_label}")
+    print(f"  Costo diario:   ${resultado.costo_total:>10,.0f}")
+    print(f"  Costo mensual:  ${resultado.costo_mensual:>10,.0f}")
     print("═" * 60)

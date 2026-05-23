@@ -91,6 +91,8 @@ class AportesNutricionales(BaseModel):
     vit_c_mg:     float
     vit_b1_mg:    float
     vit_b2_mg:    float
+    fibra_g:      float
+    gramos_total: float
 
 
 class ReqOMS(BaseModel):
@@ -273,6 +275,8 @@ def calcular_plan(body: PlanRequest):
             vit_c_mg=round(ap["vit_c_mg"], 1),
             vit_b1_mg=round(ap["vit_b1_mg"], 2),
             vit_b2_mg=round(ap["vit_b2_mg"], 2),
+            fibra_g=round(ap.get("fibra_g", 0), 1),
+            gramos_total=round(ap.get("gramos_total", 0), 0),
         ),
         req_oms=ReqOMS(
             energia_min=req["energia_min"], energia_max=req["energia_max"],

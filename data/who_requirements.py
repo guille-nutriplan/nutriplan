@@ -28,6 +28,8 @@ Para LP:
 WHO_REQUIREMENTS = {
     # ─── LACTANTES ────────────────────────────────────────────────────────────
     '0-6m': {
+        '_rango_key': '0-6m',
+        'fibra_min': 0,
         'label': 'Lactante 0-6 meses',
         'nota': 'Alimentación exclusiva con leche materna',
         'energia_min': 550, 'energia_max': 650,
@@ -42,6 +44,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 0.3,
     },
     '6-12m': {
+        '_rango_key': '6-12m',
+        'fibra_min': 0,
         'label': 'Lactante 6-12 meses',
         'nota': 'Alimentación complementaria',
         'energia_min': 700, 'energia_max': 900,
@@ -57,6 +61,8 @@ WHO_REQUIREMENTS = {
     },
     # ─── NIÑOS ────────────────────────────────────────────────────────────────
     '1-3': {
+        '_rango_key': '1-3',
+        'fibra_min': 14,
         'label': 'Niño/a 1-3 años',
         'energia_min': 1125, 'energia_max': 1350,
         'proteinas_min': 13,
@@ -70,6 +76,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 0.5,
     },
     '4-6': {
+        '_rango_key': '4-6',
+        'fibra_min': 18,
         'label': 'Niño/a 4-6 años',
         'energia_min': 1550, 'energia_max': 1800,
         'proteinas_min': 19,
@@ -83,6 +91,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 0.6,
     },
     '7-9': {
+        '_rango_key': '7-9',
+        'fibra_min': 21,
         'label': 'Niño/a 7-9 años',
         'energia_min': 1850, 'energia_max': 2100,
         'proteinas_min': 24,
@@ -97,6 +107,8 @@ WHO_REQUIREMENTS = {
     },
     # ─── ADOLESCENTES ─────────────────────────────────────────────────────────
     '10-13M': {
+        '_rango_key': '10-13M',
+        'fibra_min': 25,
         'label': 'Varón 10-13 años',
         'energia_min': 2100, 'energia_max': 2400,
         'proteinas_min': 34,
@@ -110,6 +122,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.2,
     },
     '10-13F': {
+        '_rango_key': '10-13F',
+        'fibra_min': 24,
         'label': 'Mujer 10-13 años',
         'energia_min': 2000, 'energia_max': 2300,
         'proteinas_min': 36,
@@ -123,6 +137,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.0,
     },
     '14-17M': {
+        '_rango_key': '14-17M',
+        'fibra_min': 31,
         'label': 'Varón 14-17 años',
         'energia_min': 2650, 'energia_max': 3000,
         'proteinas_min': 49,
@@ -136,6 +152,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.4,
     },
     '14-17F': {
+        '_rango_key': '14-17F',
+        'fibra_min': 26,
         'label': 'Mujer 14-17 años',
         'energia_min': 2100, 'energia_max': 2400,
         'proteinas_min': 44,
@@ -150,6 +168,8 @@ WHO_REQUIREMENTS = {
     },
     # ─── ADULTOS ──────────────────────────────────────────────────────────────
     '18-29M': {
+        '_rango_key': '18-29M',
+        'fibra_min': 38,
         'label': 'Varón adulto 18-29 años',
         'energia_min': 2550, 'energia_max': 2900,
         'proteinas_min': 56,
@@ -163,6 +183,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.6,
     },
     '18-29F': {
+        '_rango_key': '18-29F',
+        'fibra_min': 25,
         'label': 'Mujer adulta 18-29 años',
         'energia_min': 2000, 'energia_max': 2300,
         'proteinas_min': 48,
@@ -176,6 +198,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.1,
     },
     '30-59M': {
+        '_rango_key': '30-59M',
+        'fibra_min': 38,
         'label': 'Varón adulto 30-59 años',
         'energia_min': 2500, 'energia_max': 2875,
         'proteinas_min': 56,
@@ -189,6 +213,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.6,
     },
     '30-59F': {
+        '_rango_key': '30-59F',
+        'fibra_min': 25,
         'label': 'Mujer adulta 30-59 años',
         'energia_min': 1900, 'energia_max': 2185,
         'proteinas_min': 48,
@@ -203,6 +229,8 @@ WHO_REQUIREMENTS = {
     },
     # ─── ADULTOS MAYORES ──────────────────────────────────────────────────────
     '60+M': {
+        '_rango_key': '60+M',
+        'fibra_min': 30,
         'label': 'Varón adulto mayor 60+ años',
         'energia_min': 2000, 'energia_max': 2300,
         'proteinas_min': 56,
@@ -216,6 +244,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.6,
     },
     '60+F': {
+        '_rango_key': '60+F',
+        'fibra_min': 21,
         'label': 'Mujer adulta mayor 60+ años',
         'energia_min': 1700, 'energia_max': 1955,
         'proteinas_min': 48,
@@ -230,6 +260,8 @@ WHO_REQUIREMENTS = {
     },
     # ─── SITUACIONES ESPECIALES ───────────────────────────────────────────────
     'embarazada': {
+        '_rango_key': 'embarazada',
+        'fibra_min': 28,
         'label': 'Mujer embarazada',
         'nota': '+300 kcal sobre requerimiento base',
         'energia_min': 2340, 'energia_max': 2700,
@@ -244,6 +276,8 @@ WHO_REQUIREMENTS = {
         'vit_b2_min': 1.4,
     },
     'lactante_madre': {
+        '_rango_key': 'lactante_madre',
+        'fibra_min': 29,
         'label': 'Mujer lactante',
         'nota': '+500 kcal sobre requerimiento base',
         'energia_min': 2640, 'energia_max': 3000,
