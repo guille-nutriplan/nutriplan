@@ -33,6 +33,14 @@ app = FastAPI(
 )
 
 # CORS: permite que el frontend React (cualquier origen) consulte la API
+@app.on_event("startup")
+async def startup_event():
+    """Inicia la descarga de precios SEPA en background al arrancar el servidor."""
+    sepa_cache.iniciar(delay_segundos=8)
+    sepa_cache.programar_refresco(intervalo_horas=24)
+    print("[API] Servidor iniciado. Descarga SEPA programada.")
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -720,3 +728,14 @@ def analizar_dieta(body: AnalisisRequest):
         ),
         comparacion = comparacion,
     )
+
+@app.get("/api/status", tags=["Estado"])
+def get_status():
+    """Estado del servidor y del caché de precios SEPA."""
+    return {
+        "status":         "ok",
+        "sepa_status":    sepa_cache.status,
+        "sepa_mensaje":   sepa_cache.mensaje,
+        "sepa_listo":     sepa_cache.listo,
+        "fuente_precios": sepa_cache.fuente(),
+    }

@@ -316,3 +316,126 @@ if __name__ == '__main__':
     dias = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
     for i, (url, nombre) in SEPA_URLS.items():
         print(f"  {dias[i]}: {nombre}")
+
+
+# ─── Caché en memoria para Railway (sin disco persistente) ───────────────────
+
+import threading
+import gc
+from datetime import datetime
+
+class _SepaCacheManager:
+    """
+    Gestiona la descarga y caché de precios SEPA en background.
+    Thread-safe. Compatible con entornos sin disco persistente (Railway).
+    """
+    def __init__(self):
+        self._lock    = threading.Lock()
+        self._df      = None           # DataFrame de precios procesados
+        self._status  = 'pendiente'    # pendiente | descargando | listo | error
+        self._mensaje = 'Precios SEPA: pendiente de descarga'
+        self._actualizado = None
+        self._intentos = 0
+        self._MAX_INTENTOS = 3
+
+    @property
+    def status(self):
+        with self._lock:
+            return self._status
+
+    @property
+    def mensaje(self):
+        with self._lock:
+            return self._mensaje
+
+    @property
+    def listo(self):
+        with self._lock:
+            return self._status == 'listo' and self._df is not None
+
+    def get_precios(self, provincia_codigo: str | None = None) -> pd.DataFrame:
+        """
+        Devuelve precios SEPA si están disponibles, o referencia mientras carga.
+        """
+        with self._lock:
+            if self._status == 'listo' and self._df is not None:
+                return self._df.copy()
+        return _precios_referencia()
+
+    def fuente(self) -> str:
+        with self._lock:
+            return 'SEPA' if self._status == 'listo' else 'referencia_local'
+
+    def _descargar(self):
+        """Hilo de descarga. Se ejecuta en background."""
+        with self._lock:
+            self._status  = 'descargando'
+            self._mensaje = 'Descargando precios SEPA del gobierno (puede tardar 2-3 min)...'
+            self._intentos += 1
+
+        try:
+            url, nombre_dia = _url_del_dia()
+            print(f"[SEPA] Iniciando descarga: {nombre_dia} (intento {self._intentos})")
+
+            df_raw = _descargar_y_filtrar(url, nombre_dia)
+            df_precios = _procesar_precios(df_raw, None)  # precios nacionales
+
+            # Liberar memoria del raw cuanto antes
+            del df_raw
+            gc.collect()
+
+            with self._lock:
+                self._df       = df_precios
+                self._status   = 'listo'
+                self._actualizado = datetime.now().strftime('%d/%m/%Y %H:%M')
+                self._mensaje  = f'Precios SEPA actualizados: {self._actualizado}'
+
+            print(f"[SEPA] ✓ Precios cargados: {self._actualizado}")
+
+        except Exception as e:
+            msg = f'Error SEPA: {str(e)[:120]}'
+            with self._lock:
+                self._status  = 'error'
+                self._mensaje = msg + '. Usando precios de referencia.'
+            print(f"[SEPA] ⚠ {msg}")
+
+            # Reintentar en 10 minutos si quedan intentos
+            if self._intentos < self._MAX_INTENTOS:
+                print(f"[SEPA] Reintentando en 10 minutos...")
+                t = threading.Timer(600, self._descargar)
+                t.daemon = True
+                t.start()
+
+    def iniciar(self, delay_segundos: int = 5):
+        """
+        Lanza la descarga en background. Llamar al startup del servidor.
+        El delay evita que compita con la inicialización del servidor.
+        """
+        def _lanzar():
+            import time
+            time.sleep(delay_segundos)
+            self._descargar()
+
+        t = threading.Thread(target=_lanzar, daemon=True)
+        t.name = 'sepa-downloader'
+        t.start()
+        print(f"[SEPA] Descarga programada en {delay_segundos}s")
+
+    def programar_refresco(self, intervalo_horas: int = 24):
+        """Programa un refresco periódico del caché."""
+        def _refrescar():
+            import time
+            time.sleep(intervalo_horas * 3600)
+            print("[SEPA] Iniciando refresco periódico...")
+            with self._lock:
+                self._intentos = 0
+            self._descargar()
+            self.programar_refresco(intervalo_horas)
+
+        t = threading.Thread(target=_refrescar, daemon=True)
+        t.name = 'sepa-refresher'
+        t.start()
+
+
+# Instancia global — se importa desde main.py
+sepa_cache = _SepaCacheManager()
