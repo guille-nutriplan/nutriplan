@@ -119,7 +119,7 @@ class ReqOMS(BaseModel):
     vit_c_min:    float
     vit_b1_min:   float
     vit_b2_min:   float
-    hc_max:       float
+    hc_max:       float = 520.0
     fibra_max:    float = 50.0
     calc_max:     float = 2500.0
     hierro_max:   float = 45.0
@@ -737,12 +737,16 @@ def analizar_dieta(body: AnalisisRequest):
             energia_min=req['energia_min'], energia_max=req['energia_max'],
             proteinas_min=req['proteinas_min'],
             grasas_min=req['grasas_min'], grasas_max=req['grasas_max'],
-            hc_min=req['hc_min'], calc_min=req['calc_min'],
-            hierro_min=req['hierro_min'], vit_a_min_ui=req['vit_a_min_ui'],
-            vit_c_min=req['vit_c_min'], vit_b1_min=req['vit_b1_min'],
-            vit_b2_min=req['vit_b2_min'], fibra_min=req.get('fibra_min',0),
-            zinc_min=req.get('zinc_min',0), yodo_min=req.get('yodo_min',0),
-            selenio_min=req.get('selenio_min',0),
+            hc_min=req['hc_min'], hc_max=req.get('hc_max', req['hc_min']*4),
+            calc_min=req['calc_min'],     calc_max=req.get('calc_max', 2500),
+            hierro_min=req['hierro_min'], hierro_max=req.get('hierro_max', 45),
+            vit_a_min_ui=req['vit_a_min_ui'], vit_a_max_ui=req.get('vit_a_max_ui', 10000),
+            vit_c_min=req['vit_c_min'],   vit_c_max=req.get('vit_c_max', 2000),
+            vit_b1_min=req['vit_b1_min'], vit_b2_min=req['vit_b2_min'],
+            fibra_min=req.get('fibra_min',0), fibra_max=req.get('fibra_max', 50),
+            zinc_min=req.get('zinc_min',0),   zinc_max=req.get('zinc_max', 40),
+            yodo_min=req.get('yodo_min',0),   yodo_max=req.get('yodo_max', 600),
+            selenio_min=req.get('selenio_min',0), selenio_max=req.get('selenio_max', 300),
         ),
         comparacion = comparacion,
     )
