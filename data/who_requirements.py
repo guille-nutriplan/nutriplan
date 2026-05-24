@@ -39,6 +39,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 9.1,
         'grasas_min': 25, 'grasas_max': 35,    # 40-55% de la energía
         'hc_min': 60,
+        'hc_max': 240,
         'calc_min': 300,
         'hierro_min': 0.27,
         'vit_a_min_ui': 1000,   # 300 µg RE → ~1000 UI
@@ -58,6 +59,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 13.5,
         'grasas_min': 28, 'grasas_max': 40,
         'hc_min': 95,
+        'hc_max': 380,
         'calc_min': 400,
         'hierro_min': 6.2,
         'vit_a_min_ui': 1167,   # 350 µg RE
@@ -77,6 +79,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 13,
         'grasas_min': 30, 'grasas_max': 40,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 500,
         'hierro_min': 6.2,
         'vit_a_min_ui': 1000,   # 300 µg RE → ~1000 UI (retinol)
@@ -95,6 +98,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 19,
         'grasas_min': 35, 'grasas_max': 49,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 600,
         'hierro_min': 6.3,
         'vit_a_min_ui': 1167,   # 350 µg RE
@@ -113,6 +117,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 24,
         'grasas_min': 41, 'grasas_max': 58,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 700,
         'hierro_min': 8.9,
         'vit_a_min_ui': 1333,   # 400 µg RE
@@ -132,6 +137,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 34,
         'grasas_min': 47, 'grasas_max': 67,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1300,
         'hierro_min': 9.7,
         'vit_a_min_ui': 2000,   # 600 µg RE
@@ -150,6 +156,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 36,
         'grasas_min': 44, 'grasas_max': 64,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1300,
         'hierro_min': 21.8,     # Inicio menarca
         'vit_a_min_ui': 2000,
@@ -168,6 +175,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 49,
         'grasas_min': 59, 'grasas_max': 83,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1300,
         'hierro_min': 12.5,
         'vit_a_min_ui': 2000,
@@ -186,6 +194,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 44,
         'grasas_min': 47, 'grasas_max': 67,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1300,
         'hierro_min': 20.7,
         'vit_a_min_ui': 2000,
@@ -205,6 +214,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 56,
         'grasas_min': 57, 'grasas_max': 85,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1000,
         'hierro_min': 9.1,
         'vit_a_min_ui': 2000,
@@ -223,6 +233,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 48,
         'grasas_min': 44, 'grasas_max': 67,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1000,
         'hierro_min': 19.6,
         'vit_a_min_ui': 1667,   # 500 µg RE
@@ -241,6 +252,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 56,
         'grasas_min': 56, 'grasas_max': 83,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1000,
         'hierro_min': 9.1,
         'vit_a_min_ui': 2000,
@@ -259,6 +271,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 48,
         'grasas_min': 42, 'grasas_max': 63,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1000,
         'hierro_min': 19.6,
         'vit_a_min_ui': 1667,
@@ -278,6 +291,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 56,
         'grasas_min': 44, 'grasas_max': 67,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1200,
         'hierro_min': 9.1,
         'vit_a_min_ui': 2000,
@@ -296,6 +310,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 48,
         'grasas_min': 38, 'grasas_max': 57,
         'hc_min': 130,
+        'hc_max': 520,
         'calc_min': 1200,
         'hierro_min': 9.1,     # Posmenopáusica
         'vit_a_min_ui': 1667,
@@ -316,6 +331,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 58,
         'grasas_min': 52, 'grasas_max': 78,
         'hc_min': 175,         # Mayor demanda fetal
+        'hc_max': 700,
         'calc_min': 1200,
         'hierro_min': 27.0,    # Suplementación frecuentemente necesaria
         'vit_a_min_ui': 2333,  # 700 µg RE
@@ -335,6 +351,7 @@ WHO_REQUIREMENTS = {
         'proteinas_min': 63,
         'grasas_min': 59, 'grasas_max': 88,
         'hc_min': 210,
+        'hc_max': 840,
         'calc_min': 1000,
         'hierro_min': 10.0,
         'vit_a_min_ui': 2833,  # 850 µg RE
