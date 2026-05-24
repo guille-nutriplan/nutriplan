@@ -341,6 +341,24 @@ def traducir_nombre_ar(nombre: str) -> str:
 
 
 
+
+# ─── Grupos donde se omite el estado "crudo" en el display ───────────────────
+# Nadie come batata cruda, arroz crudo, lentejas crudas, etc.
+# El LP usa los valores nutricionales de la tabla (estado crudo como referencia),
+# pero mostramos solo el nombre del alimento sin el estado obvio.
+# Para carnes, pescados, huevos y lácteos SÍ se mantiene el estado (importa).
+GRUPOS_OMITIR_ESTADO_CRUDO = {
+    'Hortalizas',   # papa cruda → papa
+    'Frutas',       # manzana (cruda) → manzana
+    'Leguminosas',  # lentejas (crudas) → lentejas
+    'FrutosSecos',  # almendras (seco) → almendras (ya es su forma natural)
+    'Cereales',     # arroz (crudo) → arroz
+}
+
+# Estados a omitir para esos grupos (solo cuando el nombre resultante sigue siendo claro)
+ESTADOS_OMITIR = {'crudo', 'cruda', 'crudos', 'crudas', 'fresco', 'fresca', 'frescos', 'frescas'}
+
+
 def _limpiar_valor(val):
     """Convierte un valor de celda a float, manejando anotaciones como '(1) 4,5'."""
     if val is None:
@@ -555,12 +573,22 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     df['SELENIO_g'] = df['SELENIO'] / 100.0
 
     # ── Nombre completo del alimento ──────────────────────────────────────────
-    df['NOMBRE_COMPLETO'] = df.apply(
-        lambda r: traducir_nombre_ar(
-            f"{r['ALIMENTO']} ({r['ESTADO']})" if r['ESTADO'] else r['ALIMENTO']
-        ),
-        axis=1
-    )
+    def _nombre_display(row):
+        alimento = row['ALIMENTO']
+        estado   = str(row['ESTADO']).strip().lower() if row['ESTADO'] else ''
+        grupo    = row['GRUPO']
+
+        # Omitir estado obvio (crudo/fresco) para verduras, frutas, cereales, legumbres
+        if grupo in GRUPOS_OMITIR_ESTADO_CRUDO and estado in ESTADOS_OMITIR:
+            nombre_base = alimento
+        elif estado:
+            nombre_base = f"{alimento} ({row['ESTADO']})"
+        else:
+            nombre_base = alimento
+
+        return traducir_nombre_ar(nombre_base)
+
+    df['NOMBRE_COMPLETO'] = df.apply(_nombre_display, axis=1)
 
     # ── Precio (se completa desde sepa_client.aplicar_precios) ───────────────
     df['PRECIO_100G'] = np.nan
