@@ -274,6 +274,29 @@ DICT_ES_AR = {
     'pan de debada':    'pan de cebada',
     'magdalena':        'muffin',
     'magdalenas':       'muffins',
+
+    # Correcciones de estados abreviados o mal escritos del Excel original
+    'crdos':           'crudos',
+    'crua':            'cruda',
+    'frsco':           'fresco',
+    'jugop':           'jugo',
+    'juego':           'jugo',
+    # Nombres mal escritos en el Excel
+    'macarroneso fideos': 'fideos macarrones',
+    'verduras (medio)':   'verduras mixtas',
+    # Cortes de carne con paréntesis redundante
+    'Caballo (Carne)':    'Carne de caballo',
+    'Cabra (carne)':      'Carne de cabra',
+    'Cabrito (carne)':    'Carne de cabrito',
+    'Carnero (carne)':    'Carne de carnero',
+    'Pollo (corazon)':    'Corazón de pollo',
+    'Pollo (higado)':     'Hígado de pollo',
+    # Estados numéricos (grado de extracción en harinas)
+    '(0.85)':             '(extracción 85%)',
+    '(0.80)':             '(extracción 80%)',
+    '(0.75)':             '(extracción 75%)',
+    '(0.70)':             '(extracción 70%)',
+    '(1)':                '(integral)',
     # Abreviaciones del Excel original
     'leche vaca condens.': 'leche condensada',
     'leche vaca cond.':    'leche condensada',
