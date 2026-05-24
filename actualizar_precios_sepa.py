@@ -33,32 +33,24 @@ PROVINCIAS_TARGET = ['AR-B', 'AR-C', 'AR-X', 'AR-S', 'AR-Q', 'AR-M', 'AR-T']
 
 
 def procesar_todas_las_provincias(df_raw):
-    """Calcula precios medianos nacionales y por provincia target."""
-    resultado = {}
-
-    # Nacional (todas las provincias)
+    """
+    Calcula precios medianos nacionales.
+    Las cadenas SEPA son nacionales — los datos provinciales son escasos
+    y poco confiables para discriminar. Se usa precio nacional para todos.
+    """
     print("  Calculando precios nacionales...")
     df_nacional = _procesar_precios(df_raw, provincia_codigo=None)
-    resultado['nacional'] = {
+    precios_nacional = {
         row['GRUPO']: round(float(row['PRECIO_MEDIANA_100G']), 2)
         for _, row in df_nacional.iterrows()
     }
-    print(f"  ✓ Nacional: {len(resultado['nacional'])} grupos")
+    print(f"  ✓ Nacional: {len(precios_nacional)} grupos")
 
-    # Por provincia
+    # Mismo precio para todas las provincias
+    resultado = {'nacional': precios_nacional}
     for cod in PROVINCIAS_TARGET:
-        nombre = PROVINCIAS.get(cod, cod)
-        print(f"  Calculando precios {nombre}...")
-        try:
-            df_prov = _procesar_precios(df_raw, provincia_codigo=cod)
-            resultado[cod] = {
-                row['GRUPO']: round(float(row['PRECIO_MEDIANA_100G']), 2)
-                for _, row in df_prov.iterrows()
-            }
-            print(f"  ✓ {nombre}: {len(resultado[cod])} grupos")
-        except Exception as e:
-            print(f"  ⚠ {nombre}: error ({e}), usando nacional")
-            resultado[cod] = resultado['nacional'].copy()
+        resultado[cod] = precios_nacional.copy()
+    print(f"  ✓ Precios nacionales aplicados a {len(PROVINCIAS_TARGET)} provincias")
 
     return resultado
 
@@ -100,15 +92,30 @@ def main():
     print("═" * 60)
     print(f"  Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n")
 
-    # Descargar SEPA
-    url, nombre_dia = _url_del_dia()
-    print(f"Descargando SEPA {nombre_dia}...")
-    print("(puede tardar 2-3 minutos según tu conexión)\n")
+    # Intentar descargar desde el día actual hacia atrás (hasta 7 días)
+    # El archivo de hoy puede no estar actualizado; usar el más reciente disponible
+    from data.sepa_client import SEPA_URLS
+    from datetime import timedelta
 
-    try:
-        df_raw = _descargar_y_filtrar(url, nombre_dia)
-    except Exception as e:
-        print(f"\n✗ Error descargando SEPA: {e}")
+    dia_hoy = datetime.now().weekday()
+    df_raw = None
+    nombre_dia_ok = None
+
+    for delta in range(7):
+        dia_intento = (dia_hoy - delta) % 7
+        url, nombre_dia = SEPA_URLS[dia_intento]
+        dias_nombre = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo']
+        print(f"Probando SEPA {nombre_dia} (hace {delta} día{'s' if delta != 1 else ''})...")
+        try:
+            df_raw = _descargar_y_filtrar(url, nombre_dia)
+            nombre_dia_ok = nombre_dia
+            print(f"✓ Datos obtenidos de {nombre_dia}")
+            break
+        except Exception as e:
+            print(f"  ✗ {nombre_dia}: {e}")
+
+    if df_raw is None:
+        print("\n✗ No se pudo descargar ningún archivo SEPA.")
         print("\n¿Querés guardar los precios de referencia en su lugar? (s/n): ", end='')
         if input().strip().lower() == 's':
             df_ref = _precios_referencia()
@@ -118,7 +125,6 @@ def main():
                     for _, row in df_ref.iterrows()
                 }
             }
-            # Copiar nacional a todas las provincias
             for cod in PROVINCIAS_TARGET:
                 precios[cod] = precios['nacional'].copy()
             guardar_json(precios, 'referencia_local')
@@ -133,7 +139,7 @@ def main():
     del df_raw
 
     # Guardar JSON
-    datos = guardar_json(precios, nombre_dia)
+    datos = guardar_json(precios, nombre_dia_ok)
 
     # Resumen
     print("\n─── Precios nacionales ($/100g) ─────────────────────")
@@ -142,7 +148,7 @@ def main():
 
     # Git push
     fecha_str = datetime.now().strftime('%d/%m/%Y')
-    git_push(f"data: precios SEPA actualizados {fecha_str}")
+    git_push(f"data: precios SEPA {nombre_dia_ok} actualizados {fecha_str}")
 
     print("\n" + "═" * 60)
     print("  ✓ Proceso completado")

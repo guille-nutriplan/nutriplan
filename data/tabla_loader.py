@@ -143,20 +143,42 @@ EXCLUIR_ESTADOS = {
 # cantidades (condimentos, hierbas). El optimizador los sobreusa si no se limitan.
 # Formato: {palabra_clave_en_nombre_lower: gramos_maximo_dia}
 LIMITES_INDIVIDUALES = {
-    'perejil':    25,    # condimento/hierba — máx ~1 atado pequeño
-    'estragon':   10,
-    'laurel':      5,
-    'tomillo':    10,
-    'oregano':    10,
-    'albahaca':   15,
-    'cebollino':  15,
-    'eneldo':     10,
-    'comino':      5,
-    'canela':      5,
-    'pimienta':    5,
-    'mostaza':    30,    # condimento
-    'ketchup':    50,
-    'mahonesa':   30,    # también en Aceites — ya tiene max de grupo
+    # ── Hierbas frescas (condimento, no alimento principal) ───────────────────
+    'perejil':     3,    # 1-2 cucharadas máximo
+    'cilantro':    3,
+    'albahaca':    3,
+    'menta':       3,
+    'estragon':    3,
+    'cebollino':   5,
+    'eneldo':      3,
+    'laurel':      1,    # hoja de laurel = <1g
+    # ── Especias y condimentos secos ─────────────────────────────────────────
+    'tomillo':     2,
+    'oregano':     2,
+    'comino':      2,
+    'canela':      3,
+    'pimienta':    2,
+    'pimenton':    3,
+    'azafran':     1,
+    'nuez moscada': 1,
+    'curry':       3,
+    # ── Condimentos líquidos y pastas ─────────────────────────────────────────
+    'mostaza':    10,    # 2 cucharaditas
+    'ketchup':    30,    # 2 cucharadas
+    'mahonesa':   15,    # 1 cucharada
+    'mayonesa':   15,
+    'vinagre':    15,    # 1 cucharada
+    'salsa de soja': 10,
+    'salsa worcestershire': 5,
+    # ── Otros ingredientes de uso limitado ────────────────────────────────────
+    'ajo':        10,    # 2-3 dientes
+    'levadura':    7,    # levadura de cerveza o nutricional
+    'cacao':      20,    # 2 cucharadas
+    'cafe':       15,    # 1-2 tazas
+    'te':          5,    # bolsitas
+    'miel':       20,    # 1 cucharada
+    'alcaparra':   5,
+    'aceituna':   30,    # 5-6 aceitunas
 }
 
 # ─── FIX 3: Penalización de formas concentradas/secas ─────────────────────────
