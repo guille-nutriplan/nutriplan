@@ -117,68 +117,143 @@ def _url_del_dia() -> tuple[str, str]:
 
 def _descargar_y_filtrar(url: str, nombre_dia: str) -> pd.DataFrame:
     """
-    Descarga el ZIP de SEPA en streaming, extrae el CSV y filtra
-    solo las filas de alimentos. Procesa ~12M filas → devuelve ~50K.
+    Descarga el ZIP de SEPA y procesa los CSV internos.
+    Estructura: ZIP externo → ZIPs por cadena → productos.csv + sucursales.csv
+    Separador: pipe |
     """
-    print(f"  ⬇ Descargando SEPA {nombre_dia} (puede tardar 1-2 minutos)...")
+    print(f"  ⬇ Descargando SEPA {nombre_dia}...")
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (compatible; NutriPlan/2.0; +https://nutriplan-oms.vercel.app)',
-        'Accept': 'application/zip, application/octet-stream, */*',
-        'Accept-Encoding': 'gzip, deflate',
-    }
-
+    headers = {'User-Agent': 'Mozilla/5.0 NutriPlan/2.0'}
     with requests.get(url, stream=True, timeout=300, headers=headers) as resp:
         resp.raise_for_status()
-
-        # Leer el ZIP completo en memoria (comprimido: ~200-400MB)
         contenido = io.BytesIO()
         descargados = 0
-        for chunk in resp.iter_content(chunk_size=2 * 1024 * 1024):  # 2MB chunks
+        for chunk in resp.iter_content(2 * 1024 * 1024):
             contenido.write(chunk)
             descargados += len(chunk)
-            if descargados % (50 * 1024 * 1024) == 0:  # cada 50MB
-                print(f"    [SEPA] {descargados // (1024*1024)}MB descargados...")
-
+            if descargados % (50 * 1024 * 1024) == 0:
+                print(f"    {descargados // (1024*1024)}MB...")
         contenido.seek(0)
 
-    print(f"  ✓ Descarga completa ({descargados // (1024*1024)}MB). Procesando...")
+    print(f"  ✓ {descargados // (1024*1024)}MB descargados. Procesando...")
 
-    # Abrir el ZIP y leer el CSV en chunks
-    registros_alimentos = []
+    # Acumuladores por cadena
+    todos_productos  = []
+    todas_sucursales = []
+    cadenas_ok = 0
 
-    with zipfile.ZipFile(contenido) as zf:
-        # El ZIP contiene un CSV con el mismo nombre que el ZIP
-        nombre_csv = zf.namelist()[0]
-        print(f"  Archivo dentro del ZIP: {nombre_csv}")
+    with zipfile.ZipFile(contenido) as zf_outer:
+        inner_zips = [e for e in zf_outer.namelist()
+                      if e.lower().endswith('.zip') and not e.endswith('/')]
+        print(f"  {len(inner_zips)} cadenas en el ZIP")
 
-        with zf.open(nombre_csv) as csv_file:
-            # Leer en chunks para no cargar todo en memoria
-            for chunk in pd.read_csv(
-                csv_file,
-                chunksize=50_000,
-                usecols=lambda c: c in [
-                    'id_comercio', 'id_bandera', 'id_sucursal',
-                    'comercio_bandera_nombre', 'comercio_provincia',
-                    'producto_descripcion', 'producto_precio_lista',
-                ],
-                dtype=str,
-                encoding='utf-8',
-                on_bad_lines='skip',
-                low_memory=False,
-            ):
-                # Filtrar solo alimentos
-                chunk['GRUPO'] = chunk['producto_descripcion'].apply(_mapear_grupo)
-                alimentos = chunk.dropna(subset=['GRUPO'])
-                if len(alimentos):
-                    registros_alimentos.append(alimentos)
+        for entry in inner_zips:
+            try:
+                with zf_outer.open(entry) as f:
+                    inner_bytes = io.BytesIO(f.read())
 
-    if not registros_alimentos:
-        raise RuntimeError("No se encontraron registros de alimentos en el CSV")
+                with zipfile.ZipFile(inner_bytes) as zf_inner:
+                    archivos = {
+                        Path(n).name.lower(): n
+                        for n in zf_inner.namelist()
+                        if not n.endswith('/')
+                    }
 
-    df = pd.concat(registros_alimentos, ignore_index=True)
-    print(f"  ✓ {len(df):,} registros de alimentos encontrados")
-    return df
+                    # Leer sucursales.csv → id_sucursal + sucursales_provincia
+                    suc_key = next(
+                        (k for k in archivos if 'sucursal' in k and k.endswith('.csv')),
+                        None
+                    )
+                    df_suc = None
+                    if suc_key:
+                        with zf_inner.open(archivos[suc_key]) as f:
+                            try:
+                                df_suc = pd.read_csv(
+                                    f, sep='|', dtype=str,
+                                    encoding='utf-8', on_bad_lines='skip',
+                                    usecols=lambda c: c in [
+                                        'id_comercio', 'id_bandera', 'id_sucursal',
+                                        'sucursales_provincia', 'sucursales_localidad',
+                                    ]
+                                )
+                            except Exception:
+                                pass
+
+                    # Leer productos.csv → precios
+                    prod_key = next(
+                        (k for k in archivos if 'producto' in k and k.endswith('.csv')),
+                        None
+                    )
+                    if prod_key and df_suc is not None:
+                        with zf_inner.open(archivos[prod_key]) as f:
+                            try:
+                                df_prod = pd.read_csv(
+                                    f, sep='|', dtype=str,
+                                    encoding='utf-8', on_bad_lines='skip',
+                                    usecols=lambda c: c in [
+                                        'id_comercio', 'id_bandera', 'id_sucursal',
+                                        'productos_descripcion',
+                                        'productos_precio_lista',
+                                        'productos_precio_referencia',
+                                        'productos_cantidad_referencia',
+                                        'productos_unidad_medida_referencia',
+                                        'productos_cantidad_presentacion',
+                                        'productos_unidad_medida_presentacion',
+                                    ]
+                                )
+                                todos_productos.append(df_prod)
+                                todas_sucursales.append(df_suc)
+                                cadenas_ok += 1
+                            except Exception:
+                                pass
+
+            except Exception as e:
+                pass
+
+    if not todos_productos:
+        raise RuntimeError("No se pudo leer ninguna cadena del ZIP")
+
+    print(f"  ✓ {cadenas_ok} cadenas procesadas")
+
+    df_prod = pd.concat(todos_productos, ignore_index=True)
+    df_suc  = pd.concat(todas_sucursales, ignore_index=True)
+
+    # JOIN productos + sucursales por id_sucursal
+    # (combinando id_comercio + id_bandera + id_sucursal como clave compuesta)
+    for df in [df_prod, df_suc]:
+        df['_key'] = (
+            df.get('id_comercio', '').fillna('') + '_' +
+            df.get('id_bandera', '').fillna('') + '_' +
+            df['id_sucursal'].fillna('')
+        )
+
+    suc_map = df_suc[['_key', 'sucursales_provincia']].drop_duplicates('_key')
+    df_prod = df_prod.merge(suc_map, on='_key', how='left')
+
+    # Filtrar alimentos por descripción
+    df_prod['GRUPO'] = df_prod['productos_descripcion'].apply(_mapear_grupo)
+    df_alim = df_prod.dropna(subset=['GRUPO']).copy()
+
+    if len(df_alim) == 0:
+        raise RuntimeError("No se encontraron registros de alimentos")
+
+    print(f"  ✓ {len(df_alim):,} registros de alimentos")
+
+    # Renombrar para compatibilidad con _procesar_precios
+    df_alim = df_alim.rename(columns={
+        'sucursales_provincia':               'comercio_provincia',
+        'productos_descripcion':              'producto_descripcion',
+        'productos_precio_lista':             'producto_precio_lista',
+        'productos_precio_referencia':        'precio_ref',
+        'productos_unidad_medida_referencia': 'unidad_ref',
+        'productos_cantidad_referencia':      'cantidad_ref',
+    })
+
+    if 'comercio_provincia' in df_alim.columns:
+        provs = df_alim['comercio_provincia'].dropna().unique()[:6]
+        print(f"  Provincias: {list(provs)}")
+
+    return df_alim
 
 
 def _procesar_precios(df: pd.DataFrame,
@@ -201,23 +276,44 @@ def _procesar_precios(df: pd.DataFrame,
             else:
                 print(f"  ⚠ Pocos datos para la provincia, usando precios nacionales")
 
-    df['precio'] = pd.to_numeric(df['producto_precio_lista'], errors='coerce')
-    df = df.dropna(subset=['precio'])
-    df = df[df['precio'] > 0]
+    # Usar precio_referencia si está disponible (ya normalizado a kg/l)
+    # Si no, calcular desde precio_lista dividiendo por gramos del nombre
+    if 'precio_ref' in df.columns and 'unidad_ref' in df.columns:
+        df['precio_ref_n'] = pd.to_numeric(df['precio_ref'], errors='coerce')
+        df['cantidad_ref_n'] = pd.to_numeric(df.get('cantidad_ref', pd.Series(1, index=df.index)), errors='coerce').fillna(1)
 
-    # Extraer gramos del nombre del producto para normalizar a /100g
-    def extraer_gramos(desc):
-        desc = str(desc).lower()
-        for pat, mult in [(r'(\d+(?:[,\.]\d+)?)\s*kg', 1000),
-                          (r'(\d+(?:[,\.]\d+)?)\s*gr?(?:\b|$)', 1)]:
-            m = re.search(pat, desc)
-            if m:
-                val = float(m.group(1).replace(',', '.'))
-                return val * mult if mult == 1000 else val
-        return 1000  # default 1kg
+        def _precio_100g_ref(row):
+            p = row.get('precio_ref_n')
+            u = str(row.get('unidad_ref', '')).lower().strip()
+            c = row.get('cantidad_ref_n', 1) or 1
+            if pd.isna(p) or p <= 0:
+                return None
+            precio_por_unidad = p / c
+            if u in ('kg',):     return precio_por_unidad / 10   # /kg → /100g
+            if u in ('g', 'gr'): return precio_por_unidad * 100  # /g  → /100g
+            if u in ('l',):      return precio_por_unidad / 10   # /l  → /100ml
+            if u in ('ml',):     return precio_por_unidad * 100  # /ml → /100ml
+            return precio_por_unidad / 10  # asumir kg por defecto
 
-    df['gramos'] = df['producto_descripcion'].apply(extraer_gramos)
-    df['precio_100g'] = df['precio'] / df['gramos'] * 100
+        df['precio_100g'] = df.apply(_precio_100g_ref, axis=1)
+        df = df.dropna(subset=['precio_100g'])
+    else:
+        df['precio'] = pd.to_numeric(df['producto_precio_lista'], errors='coerce')
+        df = df.dropna(subset=['precio'])
+        df = df[df['precio'] > 0]
+
+        def extraer_gramos(desc):
+            desc = str(desc).lower()
+            for pat, mult in [(r'(\d+(?:[,\.]\d+)?)\s*kg', 1000),
+                              (r'(\d+(?:[,\.]\d+)?)\s*gr?(?:\b|$)', 1)]:
+                m = re.search(pat, desc)
+                if m:
+                    val = float(m.group(1).replace(',', '.'))
+                    return val * mult if mult == 1000 else val
+            return 1000
+
+        df['gramos'] = df['producto_descripcion'].apply(extraer_gramos)
+        df['precio_100g'] = df['precio'] / df['gramos'] * 100
 
     # Eliminar outliers por grupo
     resultado = []

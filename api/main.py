@@ -203,17 +203,11 @@ def calcular_plan(body: PlanRequest):
 
     req = WHO_REQUIREMENTS[body.rango_etario]
 
-    # Obtener precios
-    try:
-        if body.provincia_codigo:
-            df_precios = obtener_precios_sepa(provincia_codigo=body.provincia_codigo)
-            nombre_provincia = PROVINCIAS.get(body.provincia_codigo, body.provincia_codigo)
-        else:
-            df_precios = _precios_referencia()
-            nombre_provincia = "Nacional"
-    except Exception:
-        df_precios = _precios_referencia()
-        nombre_provincia = "Nacional (fallback)"
+    # Usar caché SEPA si está disponible, sino referencia
+    df_precios = sepa_cache.get_precios(
+        provincia_codigo=body.provincia_codigo if body.provincia_codigo else None
+    )
+    nombre_provincia = PROVINCIAS.get(body.provincia_codigo, "Nacional") if body.provincia_codigo else "Nacional"
 
     # Aplicar precios al DataFrame
     df = aplicar_precios(DF_BASE.copy(), df_precios)
@@ -382,7 +376,7 @@ def calcular_plan_familia(body: FamiliaRequest):
     # Obtener precios
     try:
         if body.provincia_codigo:
-            df_precios = obtener_precios_sepa(provincia_codigo=body.provincia_codigo)
+            df_precios = sepa_cache.get_precios(provincia_codigo=body.provincia_codigo)
             nombre_provincia = PROVINCIAS.get(body.provincia_codigo, body.provincia_codigo)
         else:
             df_precios = _precios_referencia()
