@@ -309,3 +309,175 @@ def calcular_plan(body: PlanRequest):
         costo_mensual=round(resultado.costo_mensual, 0),
         fuente_precios=resultado.fuente_precios,
     )
+
+
+# ─── Modelos para modo familia ────────────────────────────────────────────────
+
+class MiembroFamilia(BaseModel):
+    nombre:       str = Field(..., description="Nombre o apodo del miembro")
+    rango_etario: str = Field(..., description="Clave del rango etario OMS")
+    filtros:      FiltrosRequest = Field(default_factory=FiltrosRequest)
+
+
+class FamiliaRequest(BaseModel):
+    provincia_codigo: Optional[str] = None
+    miembros:         list[MiembroFamilia] = Field(..., min_length=1, max_length=10)
+
+
+class AlimentoFamiliaItem(BaseModel):
+    nombre:      str
+    grupo:       str
+    gramos_total: float
+    costo_total:  float
+
+
+class ResumenMiembro(BaseModel):
+    nombre:        str
+    rango_label:   str
+    costo_diario:  float
+    energia_kcal:  float
+    proteinas_g:   float
+    exito:         bool
+    mensaje:       str
+
+
+class FamiliaResponse(BaseModel):
+    exito:            bool
+    mensaje:          str
+    provincia:        str
+    n_miembros:       int
+    miembros:         list[ResumenMiembro]
+    lista_compras:    list[AlimentoFamiliaItem]
+    costo_diario_total:  float
+    costo_mensual_total: float
+    fuente_precios:   str
+
+
+@app.post("/api/plan/familia", response_model=FamiliaResponse, tags=["Optimización"])
+def calcular_plan_familia(body: FamiliaRequest):
+    """
+    Calcula el plan nutricional para toda la familia y devuelve
+    una lista de compras consolidada con cantidades sumadas.
+    """
+    # Validar rangos etarios
+    for m in body.miembros:
+        if m.rango_etario not in WHO_REQUIREMENTS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Rango etario '{m.rango_etario}' no válido para {m.nombre}"
+            )
+
+    # Obtener precios
+    try:
+        if body.provincia_codigo:
+            df_precios = obtener_precios_sepa(provincia_codigo=body.provincia_codigo)
+            nombre_provincia = PROVINCIAS.get(body.provincia_codigo, body.provincia_codigo)
+        else:
+            df_precios = _precios_referencia()
+            nombre_provincia = "Nacional"
+    except Exception:
+        df_precios = _precios_referencia()
+        nombre_provincia = "Nacional (fallback)"
+
+    df_base = aplicar_precios(DF_BASE.copy(), df_precios)
+
+    # Calcular plan para cada miembro
+    resumenes  = []
+    planes     = []
+    fuente     = "referencia_local"
+
+    for miembro in body.miembros:
+        req     = WHO_REQUIREMENTS[miembro.rango_etario]
+        filtros = FiltrosDieta(
+            celiaco=miembro.filtros.celiaco,
+            sin_lactosa=miembro.filtros.sin_lactosa,
+            vegetariano=miembro.filtros.vegetariano,
+            vegano=miembro.filtros.vegano,
+            alergenos=miembro.filtros.alergenos,
+        )
+
+        try:
+            resultado = optimizar_dieta(df_base, req, filtros)
+        except Exception as e:
+            resumenes.append(ResumenMiembro(
+                nombre=miembro.nombre,
+                rango_label=req["label"],
+                costo_diario=0,
+                energia_kcal=0,
+                proteinas_g=0,
+                exito=False,
+                mensaje=str(e),
+            ))
+            continue
+
+        if resultado.exito:
+            fuente = resultado.fuente_precios
+            ap = resultado.aportes
+            resumenes.append(ResumenMiembro(
+                nombre=miembro.nombre,
+                rango_label=req["label"],
+                costo_diario=round(resultado.costo_total, 0),
+                energia_kcal=round(ap["energia_kcal"], 0),
+                proteinas_g=round(ap["proteinas_g"], 1),
+                exito=True,
+                mensaje="OK",
+            ))
+            planes.append(resultado.alimentos)
+        else:
+            resumenes.append(ResumenMiembro(
+                nombre=miembro.nombre,
+                rango_label=req["label"],
+                costo_diario=0,
+                energia_kcal=0,
+                proteinas_g=0,
+                exito=False,
+                mensaje=resultado.mensaje,
+            ))
+
+    if not planes:
+        return FamiliaResponse(
+            exito=False,
+            mensaje="No se pudo calcular el plan para ningún miembro.",
+            provincia=nombre_provincia,
+            n_miembros=len(body.miembros),
+            miembros=resumenes,
+            lista_compras=[],
+            costo_diario_total=0,
+            costo_mensual_total=0,
+            fuente_precios="error",
+        )
+
+    # Consolidar lista de compras — sumar gramos y costo por alimento
+    import pandas as _pd
+    df_consolidado = _pd.concat(planes, ignore_index=True)
+    df_agrupado = (
+        df_consolidado
+        .groupby(['NOMBRE_COMPLETO', 'GRUPO'], as_index=False)
+        .agg({'GRAMOS': 'sum', 'COSTO': 'sum'})
+        .sort_values(['GRUPO', 'GRAMOS'], ascending=[True, False])
+    )
+
+    lista_compras = [
+        AlimentoFamiliaItem(
+            nombre=row['NOMBRE_COMPLETO'],
+            grupo=row['GRUPO'],
+            gramos_total=round(row['GRAMOS'], 0),
+            costo_total=round(row['COSTO'], 0),
+        )
+        for _, row in df_agrupado.iterrows()
+    ]
+
+    costo_diario_total  = sum(r.costo_diario for r in resumenes)
+    costo_mensual_total = costo_diario_total * 30
+
+    return FamiliaResponse(
+        exito=True,
+        mensaje=f"Plan calculado para {len(planes)} miembro(s)",
+        provincia=nombre_provincia,
+        n_miembros=len(body.miembros),
+        miembros=resumenes,
+        lista_compras=lista_compras,
+        costo_diario_total=round(costo_diario_total, 0),
+        costo_mensual_total=round(costo_mensual_total, 0),
+        fuente_precios=fuente,
+    )
