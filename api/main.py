@@ -118,10 +118,11 @@ class ReqOMS(BaseModel):
 
 
 class PlanResponse(BaseModel):
-    exito:          bool
-    mensaje:        str
-    provincia:      str
-    rango_label:    str
+    exito:             bool
+    mensaje:           str
+    solo_leche_materna: bool = False
+    provincia:         str
+    rango_label:       str
     alimentos:      list[AlimentoItem]
     aportes:        AportesNutricionales
     req_oms:        ReqOMS
@@ -228,8 +229,10 @@ def calcular_plan(body: PlanRequest):
         )
 
     if not resultado.exito:
+        solo_leche = resultado.infactibilidad_detalle == 'solo_leche_materna'
         return PlanResponse(
             exito=False,
+            solo_leche_materna=solo_leche,
             mensaje=resultado.mensaje,
             provincia=nombre_provincia,
             rango_label=req["label"],
@@ -271,7 +274,8 @@ def calcular_plan(body: PlanRequest):
 
     return PlanResponse(
         exito=True,
-        mensaje="Plan calculado correctamente",
+        solo_leche_materna=False,
+        mensaje=resultado.mensaje if resultado.mensaje != "Optimización exitosa" else "Plan calculado correctamente",
         provincia=nombre_provincia,
         rango_label=req["label"],
         alimentos=alimentos_out,

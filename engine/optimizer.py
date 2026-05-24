@@ -110,6 +110,53 @@ class ResultadoOptimizacion:
     infactibilidad_detalle: Optional[str] = None
 
 
+
+# ─── Restricciones etarias — Guías Alimentarias Ministerio Salud Nación ──────
+# Fuente: "Guías Alimentarias para la Población Infantil" — MSyA Nación, 2006
+
+RESTRICCIONES_ETARIAS = {
+    "0-6m": {
+        "solo_leche": True,
+        "mensaje": (
+            "Lactantes 0-6 meses: SOLO leche materna o formula infantil. "
+            "No se necesita ningun alimento solido, ni agua, ni infusiones. "
+            "La leche materna exclusiva cubre todas las necesidades en esta etapa."
+        ),
+    },
+    "6-12m": {
+        "solo_leche": False,
+        "grupos_excluidos": ["Embutidos", "FrutosSecos"],
+        "keywords_excluidos": ["miel", "soja", "copetin", "salchich", "fiambre", "hamburguesa"],
+        "max_por_grupo": {
+            "Azucares": 15,
+            "Aceites":  10,
+            "Pescados": 50,
+        },
+        "aviso": (
+            "Plan complementario 6-12 meses (Guias MSN Argentina). "
+            "Continuar con leche materna o formula como base. "
+            "Sin sal agregada, sin miel, sin soja, sin frutos secos enteros. "
+            "Legumbres: tamizadas y sin piel desde los 7-8 meses."
+        ),
+    },
+    "1-3": {
+        "solo_leche": False,
+        "grupos_excluidos": ["Embutidos"],
+        "keywords_excluidos": ["copetin", "fiambre", "salchich", "hamburguesa"],
+        "max_por_grupo": {
+            "FrutosSecos": 0,
+            "Azucares":   30,
+        },
+        "aviso": (
+            "Plan 1-3 anos (Guias MSN Argentina). "
+            "Alimentos blandos o en trozos pequenos. "
+            "Sin frutos secos enteros (riesgo atragantamiento). "
+            "Sin fiambres ni embutidos industriales."
+        ),
+    },
+}
+
+
 def _aplicar_filtros(df: pd.DataFrame, filtros: FiltrosDieta) -> pd.DataFrame:
     df = df.copy()
 
@@ -166,6 +213,29 @@ def optimizar_dieta(
 
     _min_grupo = {**MIN_POR_GRUPO, **(min_por_grupo or {})}
     _max_grupo = {**MAX_POR_GRUPO, **(max_por_grupo or {})}
+
+    # ── Aplicar restricciones etarias ────────────────────────────────────────
+    rango_key = req.get('_rango_key', '')
+    restriccion_etaria = RESTRICCIONES_ETARIAS.get(rango_key, {})
+    aviso_etario = restriccion_etaria.get('aviso', '')
+
+    # 0-6m: no correr LP
+    if restriccion_etaria.get('solo_leche'):
+        return ResultadoOptimizacion(
+            exito=False,
+            mensaje=restriccion_etaria.get('mensaje', ''),
+            alimentos=pd.DataFrame(), aportes={}, costo_total=0,
+            costo_mensual=0, fuente_precios='', req=req,
+            infactibilidad_detalle='solo_leche_materna',
+        )
+
+    # Ajustar grupos excluidos por edad
+    for grupo in restriccion_etaria.get('grupos_excluidos', []):
+        _min_grupo[grupo] = 0
+
+    # Ajustar máximos por edad
+    for grupo, maximo in restriccion_etaria.get('max_por_grupo', {}).items():
+        _max_grupo[grupo] = maximo
 
     if filtros.vegetariano or filtros.vegano:
         for g in ['Carnes', 'Aves', 'Pescados', 'Embutidos']:
@@ -371,7 +441,7 @@ def optimizar_dieta(
 
     return ResultadoOptimizacion(
         exito=True,
-        mensaje="Optimización exitosa",
+        mensaje=aviso_etario if aviso_etario else "Optimización exitosa",
         alimentos=df_res[cols_out],
         aportes=aportes,
         costo_total=costo_total,
