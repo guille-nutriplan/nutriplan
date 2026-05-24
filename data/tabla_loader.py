@@ -406,6 +406,9 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     print(f"  ({n_total - n_excluidos} disponibles para optimización, "
           f"{n_excluidos} excluidos por baja disponibilidad)")
 
+    # Aplicar enriquecimiento USDA si existe el CSV
+    df = aplicar_enriquecimiento_usda(df)
+
     return df
 
 
@@ -433,6 +436,111 @@ def resumen_tabla(df: pd.DataFrame) -> None:
     pen = df[df['FACTOR_PRECIO'] > 1.0][['NOMBRE_COMPLETO', 'GRUPO', 'FACTOR_PRECIO']]
     print(pen.to_string(index=False))
 
+
+
+
+def aplicar_enriquecimiento_usda(df: pd.DataFrame,
+                                  ruta_csv: str | Path = None) -> pd.DataFrame:
+    """
+    Aplica datos reales de USDA sobre los valores estimados de Zinc y Selenio.
+    Si el archivo no existe o falla, mantiene los estimados por grupo.
+    """
+    if ruta_csv is None:
+        ruta_csv = Path(__file__).parent / 'enriquecimiento_usda.csv'
+
+    ruta_csv = Path(ruta_csv)
+    if not ruta_csv.exists():
+        return df
+
+    try:
+        # Leer el CSV detectando separador automáticamente
+        # Primero detectar el separador leyendo la primera línea
+        with open(ruta_csv, 'r', encoding='utf-8-sig') as f:
+            primera_linea = f.readline()
+        sep = ';' if primera_linea.count(';') > primera_linea.count(',') else ','
+
+        # Leer como texto puro para evitar cualquier problema de dtype
+        df_usda = pd.read_csv(
+            ruta_csv,
+            sep=sep,
+            dtype=str,
+            on_bad_lines='skip',
+            encoding='utf-8-sig',
+        )
+
+        # Limpiar nombres de columnas
+        df_usda.columns = [c.strip().upper() for c in df_usda.columns]
+
+        # Convertir columnas numéricas de forma segura
+        for col in ['SCORE', 'ZINC_MG', 'YODO_UG', 'SELENIO_UG']:
+            if col in df_usda.columns:
+                df_usda[col] = pd.to_numeric(
+                    df_usda[col].str.replace(',', '.', regex=False),
+                    errors='coerce'
+                )
+
+        # Filtrar por score mínimo
+        if 'SCORE' in df_usda.columns:
+            df_usda = df_usda[df_usda['SCORE'] >= 65].copy()
+
+        # Limpiar nombre de alimento
+        if 'ALIMENTO' not in df_usda.columns:
+            print("⚠ Columna ALIMENTO no encontrada en el CSV")
+            return df
+
+        # Construir lookups
+        lookup_zinc    = {}
+        lookup_selenio = {}
+
+        for _, row in df_usda.iterrows():
+            alim = str(row.get('ALIMENTO', '')).strip()
+            if not alim:
+                continue
+            zinc = row.get('ZINC_MG')
+            sel  = row.get('SELENIO_UG')
+            if pd.notna(zinc):
+                try:
+                    lookup_zinc[alim] = float(zinc)
+                except (ValueError, TypeError):
+                    pass
+            if pd.notna(sel):
+                try:
+                    lookup_selenio[alim] = float(sel)
+                except (ValueError, TypeError):
+                    pass
+
+        # Aplicar al DataFrame usando operaciones vectorizadas
+        df = df.copy()
+
+        # Crear Series de lookup mapeando ALIMENTO → valor USDA
+        alimentos = df['ALIMENTO'].str.strip()
+
+        zinc_usda    = alimentos.map(lookup_zinc)
+        selenio_usda = alimentos.map(lookup_selenio)
+
+        # Reemplazar solo donde hay datos USDA — mantener estimados donde no
+        mask_zinc    = zinc_usda.notna()
+        mask_selenio = selenio_usda.notna()
+
+        # Forzar columnas a float64 antes de asignar
+        df['ZINC']      = df['ZINC'].astype('float64')
+        df['ZINC_g']    = df['ZINC_g'].astype('float64')
+        df['SELENIO']   = df['SELENIO'].astype('float64')
+        df['SELENIO_g'] = df['SELENIO_g'].astype('float64')
+
+        df.loc[mask_zinc,    'ZINC']      = zinc_usda[mask_zinc].astype('float64')
+        df.loc[mask_zinc,    'ZINC_g']    = zinc_usda[mask_zinc].astype('float64') / 100.0
+        df.loc[mask_selenio, 'SELENIO']   = selenio_usda[mask_selenio].astype('float64')
+        df.loc[mask_selenio, 'SELENIO_g'] = selenio_usda[mask_selenio].astype('float64') / 100.0
+
+        print(f"✓ Enriquecimiento USDA aplicado:")
+        print(f"  Zinc:    {mask_zinc.sum()} alimentos con datos reales")
+        print(f"  Selenio: {mask_selenio.sum()} alimentos con datos reales")
+        return df
+
+    except Exception as e:
+        print(f"⚠ No se pudo aplicar enriquecimiento USDA: {e}")
+        return df
 
 if __name__ == '__main__':
     df = cargar_tabla('tabla_composicion_alimentos.xlsx')

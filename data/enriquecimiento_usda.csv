@@ -1,0 +1,288 @@
+ALIMENTO,ESTADO,GRUPO,ZINC_mg,YODO_ug,SELENIO_ug,FDC_ID,FDC_NOMBRE,SCORE
+Arroz,descasac.,Cereales,1.09,,15.1,168877.0,"Rice, white, long-grain, regular, raw, enriched",69.4
+cebada,hervida,Cereales,0.39,,0.9,168421.0,"Kale, raw",73.7
+harina trigo manitoba,1,Cereales,3.33,,,169719.0,"Wheat, hard white",76.5
+macarroneso fideos,crdos,Cereales,1.41,,63.2,169736.0,"Pasta, dry, enriched",94.7
+pan de avena,natural,Cereales,1.02,,24.6,172678.0,"Bread, oatmeal",96.3
+pan de debada,natural,Cereales,,,,,,0.0
+pan de centeno,natural,Cereales,1.14,,30.9,172684.0,"Bread, rye",94.7
+pan dediabeticos,natural,Cereales,,,,,,0.0
+pan de maiz,natural,Cereales,,,,,,0.0
+pan de trigo,natural,Cereales,1.77,,25.7,172688.0,"Bread, whole-wheat, commercially prepared",89.2
+pan de viena,,Cereales,1.14,,30.9,172684.0,"Bread, rye",72.7
+buñuelos,fritos,Cereales,,,,,,0.0
+galletas,natural,Cereales,2.2,,25.5,173161.0,Rice crackers,76.2
+sagú,natural,Cereales,,,,,,0.0
+semola,natural,Cereales,1.05,,89.4,169715.0,"Semolina, enriched",97.1
+soja,harina,Leguminosas,0.99,,1.5,169282.0,"Soybeans, green, raw",75.0
+tapioca,natural,Cereales,0.12,,0.8,169717.0,"Tapioca, pearl, dry",73.3
+tarta manzana,natural,Cereales,0.39,,0.9,168421.0,"Kale, raw",77.8
+garbanzos,crudos,Leguminosas,0.56,,0.9,169994.0,"Chives, raw",75.0
+guisantes frescos,crudos,Leguminosas,1.24,,1.8,170419.0,"Peas, green, raw",93.3
+guisantes secos,crudos,Leguminosas,2.12,,7.2,174263.0,"Peanuts, spanish, raw",68.6
+habas,crudos,Leguminosas,1.0,,0.8,168574.0,"Beans, fava, in pod, raw",73.7
+judias blancas,crudas,Leguminosas,1.28,,0.9,170478.0,"Winged bean leaves, raw",68.4
+judias rojas,crudas,Leguminosas,,,,,,0.0
+lentejas secas,crudas,Leguminosas,3.27,,0.1,172420.0,"Lentils, raw",95.7
+soja fresca,crudas,Leguminosas,0.99,,1.5,169282.0,"Soybeans, green, raw",75.0
+soja seca,crudas,Leguminosas,0.99,,1.5,169282.0,"Soybeans, green, raw",75.0
+acederas,crudas,Hortalizas,,,,,,0.0
+acelgas,crudas,Hortalizas,0.36,,0.9,169991.0,"Chard, swiss, raw",93.8
+achicoria,cruda,Hortalizas,0.33,,0.7,169993.0,"Chicory roots, raw",97.1
+ajo,bulbo,Hortalizas,1.16,,14.2,169230.0,"Garlic, raw",95.2
+alcachofa,cruda,Hortalizas,0.2,,0.1,171697.0,"Apricots, raw",74.1
+apio,crudos,Hortalizas,0.13,,0.4,169988.0,"Celery, raw",95.2
+batata,cruda,Hortalizas,,,0.9,169303.0,"Sweet potato leaves, raw",80.0
+berenjena,cruda,Hortalizas,0.16,,0.3,169228.0,"Eggplant, raw",96.0
+berros,crudos,Hortalizas,0.11,,0.9,170068.0,"Watercress, raw",96.6
+brocoli,crudos,Hortalizas,0.41,,2.5,170379.0,"Broccoli, raw",96.0
+calabaza,cruda,Hortalizas,0.32,,0.3,168448.0,"Pumpkin, raw",95.7
+calabacin,crudo,Hortalizas,,,,,,0.0
+cardo,crudo,Hortalizas,0.17,,0.2,169981.0,"Cardoon, raw",95.7
+cardillo,crudo,Hortalizas,,,,,,0.0
+cebolla,crudo,Hortalizas,0.17,,0.5,170000.0,"Onions, raw",90.0
+Cebolla,frita,Hortalizas,0.17,,0.5,170000.0,"Onions, raw",90.0
+col,cruda,Hortalizas,0.18,,0.3,169975.0,"Cabbage, raw",95.7
+col debruselas,cruda,Hortalizas,0.18,,0.3,169975.0,"Cabbage, raw",95.7
+col rizada,cruda,Hortalizas,0.39,,0.9,168421.0,"Kale, raw",94.1
+coliflor,cruda,Hortalizas,0.27,,0.6,169986.0,"Cauliflower, raw",96.8
+colinabo,crudo,Hortalizas,0.03,,0.7,168424.0,"Kohlrabi, raw",96.0
+champiñon,crudo,Hortalizas,2.03,,2.2,168423.0,"Mushrooms, morel, raw",76.5
+chirivia,crudo,Hortalizas,0.59,,1.8,170417.0,"Parsnips, raw",91.7
+escarola,crudo,Hortalizas,0.79,,0.2,168412.0,"Endive, raw",95.2
+esparragos,crdudos,Hortalizas,0.54,,2.3,168389.0,"Asparagus, raw",96.3
+espinacas,crudas,Hortalizas,0.53,,1.0,168462.0,"Spinach, raw",95.7
+judias verdes,crudas,Hortalizas,0.24,,0.6,169961.0,"Beans, snap, green, raw",75.7
+lechuga,crudas,Hortalizas,0.27,,0.9,169990.0,"Celtuce, raw",78.3
+lombarda,crudas,Hortalizas,0.11,,0.2,171401.0,Lard,66.7
+mostaza,cruda,Hortalizas,0.25,,0.9,169256.0,"Mustard greens, raw",97.3
+nabos,crudos,Hortalizas,0.27,,0.7,170465.0,"Turnips, raw",95.7
+patata,cruda,Hortalizas,0.35,,0.3,170032.0,"Potatoes, raw, skin",69.0
+pepino,crudo,Hortalizas,0.17,,0.1,169225.0,"Cucumber, peeled, raw",72.7
+perejil,crudo,Hortalizas,0.1,,0.1,169118.0,"Pears, raw",76.2
+pimienta,crudo,Hortalizas,0.26,,0.4,169395.0,"Peppers, serrano, raw",70.3
+pimiento,crudo,Hortalizas,0.25,,0.1,170108.0,"Peppers, sweet, red, raw",80.0
+puerros,crudo,Hortalizas,0.11,,0.4,168155.0,"Limes, raw",73.7
+rabanos,crudo,Hortalizas,0.28,,0.6,169276.0,"Radishes, raw",96.0
+remolacha,cruda,Hortalizas,0.35,,0.7,169145.0,"Beets, raw",94.7
+repollo,crudo,Hortalizas,0.18,,0.3,169975.0,"Cabbage, raw",95.7
+salsifi,cocidos,Hortalizas,1.25,,4.0,169746.0,"Spelt, cooked",66.7
+seta,cruda,Hortalizas,1.03,,5.7,169242.0,"Mushrooms, shiitake, raw",95.7
+tomate,cruda,Hortalizas,0.22,,0.5,168566.0,"Tomatillos, raw",80.0
+trufa,fresca,Hortalizas,1.03,,5.7,169242.0,"Mushrooms, shiitake, raw",95.7
+verduras (medio),crudas,Hortalizas,,,,,,0.0
+zanahoria,cruda,Hortalizas,0.24,,0.1,170393.0,"Carrots, raw",90.9
+aceitunas sevillanas,,Frutas,,,,,,0.0
+albaricoque,crudo,Frutas,0.2,,0.1,171697.0,"Apricots, raw",91.7
+arandano,crudo,Frutas,0.16,,0.1,171711.0,"Blueberries, raw",96.8
+cerezas,crudas,Frutas,0.07,,0.0,171719.0,"Cherries, sweet, raw",94.7
+ciruelas,crudas,Frutas,0.1,,0.0,169949.0,"Plums, raw",94.7
+frambuesas,crudas,Frutas,0.42,,0.2,167755.0,"Raspberries, raw",96.8
+fresa,jugop,Frutas,0.14,,0.4,167762.0,"Strawberries, raw",97.0
+freson,crudas,Frutas,0.14,,0.4,167762.0,"Strawberries, raw",97.0
+granada,crudas,Frutas,0.35,,0.5,169134.0,"Pomegranates, raw",93.8
+grosella,crudas,Frutas,0.24,,0.1,170393.0,"Carrots, raw",75.0
+guindas,crudas,Frutas,0.1,,0.0,173954.0,"Cherries, sour, red, raw",82.9
+higo comun,crudas,Frutas,0.15,,0.2,173021.0,"Figs, raw",94.1
+limon,crudas,Frutas,0.25,,0.7,167749.0,"Lemon peel, raw",75.0
+mandarina,jugo,Frutas,0.03,,0.1,169925.0,"Tangerine juice, raw",78.8
+mango,crudos,Frutas,0.09,,0.6,169910.0,"Mangos, raw",90.0
+manzana,crudos,Frutas,0.39,,0.9,168421.0,"Kale, raw",77.8
+melocoton,jugo,Frutas,0.1,,0.1,169118.0,"Pears, raw",76.2
+melon,jugo,Frutas,0.18,,0.4,169092.0,"Melons, cantaloupe, raw",75.7
+membrillo,crudo,Frutas,0.04,,0.6,168163.0,"Quinces, raw",90.9
+mora,crudo,Frutas,0.53,,0.4,173946.0,"Blackberries, raw",97.0
+naranja,juego,Frutas,0.2,,0.9,170481.0,"Borage, raw",85.7
+nispero,zumo,Frutas,0.05,,0.6,169908.0,"Loquats, raw",90.9
+peras,crudo,Frutas,0.1,,0.1,169118.0,"Pears, raw",94.7
+piña,nectar,Frutas,,,,,,0.0
+platano,jugo crudo,Frutas,0.18,,,168215.0,"Plantains, green, raw",76.5
+ruibardo,crudo,Frutas,0.1,,1.1,167758.0,"Rhubarb, raw",95.7
+sandia,crudo,Frutas,0.1,,0.4,167765.0,"Watermelon, raw",96.6
+toronja,crudo,Frutas,,,,,,0.0
+uva blanca,crudo,Frutas,0.67,,0.9,168575.0,"Grape leaves, raw",74.1
+uva negra,crudo,Frutas,0.67,,0.9,168575.0,"Grape leaves, raw",74.1
+uva (jugo),fresco,Frutas,0.67,,0.9,168575.0,"Grape leaves, raw",74.1
+albaricoque,seco,FrutosSecos,0.2,,0.1,171697.0,"Apricots, raw",91.7
+almendras,seco,FrutosSecos,3.12,,4.1,170567.0,"Nuts, almonds",70.0
+avellana,seco,FrutosSecos,0.0,,0.0,171427.0,"Oil, hazelnut",72.7
+cacahuete,seco,FrutosSecos,,,,,,0.0
+cacao,polvo,FrutosSecos,6.81,,14.3,169593.0,"Cocoa, dry powder, unsweetened",69.6
+castaña seca,cruda,FrutosSecos,5.78,,19.9,170162.0,"Nuts, cashew nuts, raw",68.6
+castaña tierna,cruda,FrutosSecos,5.78,,19.9,170162.0,"Nuts, cashew nuts, raw",68.6
+ciruela pasa,cruda,FrutosSecos,0.1,,0.0,169949.0,"Plums, raw",88.9
+coco,fresco,FrutosSecos,,,,,,0.0
+datiles,secos,FrutosSecos,,,,,,0.0
+higos,secos,FrutosSecos,0.15,,0.2,173021.0,"Figs, raw",94.1
+melocoton,secos,FrutosSecos,0.1,,0.1,169118.0,"Pears, raw",76.2
+nuez,secos,FrutosSecos,0.0,,0.0,171030.0,"Oil, walnut",66.7
+piñones,secos,FrutosSecos,,,,,,0.0
+uva,pasa,FrutosSecos,0.67,,0.9,168575.0,"Grape leaves, raw",74.1
+Vitamina D (u.i.%): (1) = 110; (2) = 460; (3) = 300; (4) =135; (5) = 45; (6) = 480; (7) = 300; (8 )= 500,,FrutosSecos,,,,,,0.0
+helado,,Lacteos,0.6,,3.1,172226.0,Ice cream sandwich,66.7
+leche de cabra,fresca,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche de mujer,fresca,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche deoveja,fresca,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche de vaca,fresca,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche vaca condens.,con azucar,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche vaca cond. Desn.,seca,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+leche devaca,con cacao,Lacteos,0.54,,1.7,170882.0,"Milk, sheep, fluid",76.5
+mantequilla,fresca,Lacteos,,,,,,0.0
+nata,fresca,Lacteos,3.03,,8.8,172443.0,Natto,66.7
+queso brugos,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso cabrales,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso emmertal,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso gervaia,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso gorgonzola,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso graso,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso gruyere,natural,Lacteos,3.9,,14.5,171242.0,"Cheese, gruyere",96.6
+queso magro,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso manchego,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso roquefort,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso semigraso,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+queso villalon,natural,Lacteos,2.94,,14.5,173413.0,"Cheese, caraway",69.0
+requeson miraflores,,Lacteos,,,,,,0.0
+yogur,natural,Lacteos,0.59,,2.2,171284.0,"Yogurt, plain, whole milk",95.8
+Vitamina D (u.i. %) (1) =300; (2) =500,,Lacteos,,,,,,0.0
+Huevo entero,Crudo,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Huevo Clara,Crudo,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Huevo Yema,Crudo,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Huevo,Escalfado,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Huevo de pata,Crudo,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Huevo de Pava,Crudo,Huevos,1.29,,30.7,171287.0,"Egg, whole, raw, fresh",74.3
+Vitamina D (u.i. %) (1) =30; (2) =54; (3) = 136.,,Huevos,,,,,,0.0
+Azucar,refinado,Azucares,0.01,,0.6,169655.0,"Sugars, granulated",80.0
+Azucar de Uva,,Azucares,0.01,,0.6,169655.0,"Sugars, granulated",80.0
+Caldo en Cubitos,,Azucares,,,,,,0.0
+Caramelos,,Azucares,,,,,,0.0
+Confituras,,Azucares,,,,,,0.0
+Chocolate,amargo,Azucares,,,,,,0.0
+Jaleas,,Azucares,,,,,,0.0
+Levadura,prensada,Azucares,,,,,,0.0
+Melaza,,Azucares,,,,,,0.0
+Miel de Abeja,,Azucares,0.22,,0.8,169640.0,Honey,100.0
+Aceite Comestible,,Aceites,0.0,,0.0,171422.0,"Vegetable oil, palm kernel",66.7
+Mahonesa,,Aceites,,,,,,0.0
+Manteca Cerdo grasa,,Aceites,0.11,,0.2,171401.0,Lard,100.0
+Margarina,,Aceites,,,,,,0.0
+Abadejo,fresco,Pescados,0.4,,,173725.0,"Fish, pollock, Alaska, raw",76.2
+abadejo (seco),salado,Pescados,0.4,,,173725.0,"Fish, pollock, Alaska, raw",76.2
+abadejo,cocido,Pescados,0.44,,,173726.0,"Fish, pollock, Alaska, cooked",79.2
+almeja,fresco,Pescados,,,,,,0.0
+anchoas,fresco,Pescados,,,,,,0.0
+anguila de rio,fresco,Pescados,,,,,,0.0
+arenque,fresco,Pescados,,,,,,0.0
+atun,fresco,Pescados,,,,,,0.0
+bacalao,fresco,Pescados,,,,,,0.0
+bacalao seco,salado,Pescados,,,,,,0.0
+balalao,cocido,Pescados,,,,,,0.0
+barbo,fresco,Pescados,,,,,,0.0
+bonito,fresco,Pescados,,,,,,0.0
+boqueron,fresco,Pescados,,,,,,0.0
+breca,fresca,Pescados,,,,,,0.0
+calamar,fresco,Pescados,,,,,,0.0
+camaron,fresco,Pescados,,,,,,0.0
+cangrejo,fresco,Pescados,,,,,,0.0
+carpa,fresco,Pescados,,,,,,0.0
+caviar,conserva,Pescados,,,,,,0.0
+centollo,fresco,Pescados,,,,,,0.0
+congrio,fresco,Pescados,,,,,,0.0
+chirla,fresco,Pescados,,,,,,0.0
+dorada,fresco,Pescados,,,,,,0.0
+faneca,fresca,Pescados,,,,,,0.0
+gallo,fresco,Pescados,,,,,,0.0
+gambas,fresco,Pescados,,,,,,0.0
+hipoglomo (halibut(,fresco,Pescados,,,,,,0.0
+langosta,frseca,Pescados,,,,,,0.0
+langostino,fresco,Pescados,,,,,,0.0
+lenguado,fresco,Pescados,,,,,,0.0
+lija,cocida,Pescados,,,,,,0.0
+lubina,fresca,Pescados,,,,,,0.0
+mecarel,fresca,Pescados,,,,,,0.0
+mejillon,frsco,Pescados,,,,,,0.0
+merluza,fresco,Pescados,0.32,,25.9,171964.0,"Fish, haddock, raw",77.4
+mero,fresco,Pescados,,,,,,0.0
+mujol,fresco,Pescados,,,,,,0.0
+navajas,fresco,Pescados,,,,,,0.0
+ostras,fresco,Pescados,,,,,,0.0
+percas,fresco,Pescados,,,,,,0.0
+percebes,cocido,Pescados,,,,,,0.0
+pescadilla,fresco,Pescados,,,,,,0.0
+platija,fresco,Pescados,,,,,,0.0
+rana (ancas),fresco,Pescados,,,,,,0.0
+rape,fresco,Pescados,,,,,,0.0
+raya,frito,Pescados,0.24,,0.7,170071.0,"Yam, raw",66.7
+rodaballo,fresco,Pescados,,,,,,0.0
+salmon,fresco,Pescados,0.64,,36.5,173686.0,"Fish, salmon, Atlantic, wild, raw",73.1
+salmonete,fresco,Pescados,,,,,,0.0
+sardina,fresco,Pescados,0.0,,0.0,173578.0,"Fish oil, sardine",66.7
+sollo,fresco,Pescados,,,,,,0.0
+tenca,fresco,Pescados,,,,,,0.0
+trucha,fresco,Pescados,0.23,,0.7,169308.0,"Taro, raw",77.8
+vieira,fresco,Pescados,,,,,,0.0
+volador,fresco,Pescados,,,,,,0.0
+Vitamina d (u.i. %) )1) = 2500; (2) = 1300; (3) = 650; (4) = 400; (5) = 500; (6) = 350; (7) = 100; (8) =75; (9) =50; (10) = 137; (11) = 250; (12) = 35,,Pescados,,,,,,0.0
+Caballo (Carne),cruda,Carnes,,,,,,0.0
+Cabra (carne),cruda,Carnes,,,,,,0.0
+Cabrito (carne),cruda,Carnes,,,,,,0.0
+Carnero (carne),cruda,Carnes,,,,,,0.0
+Corazon,crudo,Carnes,0.35,,0.7,169145.0,"Beets, raw",66.7
+costillas magras,crudo,Carnes,,,,,,0.0
+costillas semimagr.,estofado,Carnes,,,,,,0.0
+higado,crudo,Carnes,3.07,,68.1,172415.0,"Goose, liver, raw",71.0
+Jamon,crudo,Carnes,,,,,,0.0
+jamon York,crudo,Carnes,,,,,,0.0
+lomo graso,asado,Carnes,3.87,,36.4,172845.0,"Ostrich, tenderloin, raw",69.8
+lomo magro,asado,Carnes,3.87,,36.4,172845.0,"Ostrich, tenderloin, raw",69.8
+manteca,crudo,Carnes,0.09,,1.0,173410.0,"Butter, salted",66.7
+pierna,asado,Carnes,,,,,,0.0
+promedio,,Carnes,,,,,,0.0
+riñon,crudo,Carnes,,,,,,0.0
+tocino,salado,Carnes,,,,,,0.0
+Costillas grasas,crudo,Carnes,,,,,,0.0
+Costillas Magras,crudo,Carnes,,,,,,0.0
+cuello,estofado,Carnes,,,,,,0.0
+lengua,estofado,Carnes,,,,,,0.0
+paletilla,cocido,Carnes,,,,,,0.0
+sesos,cocido,Carnes,,,,,,0.0
+corazon,crudo,Carnes,0.35,,0.7,169145.0,"Beets, raw",66.7
+costillas,crudo,Carnes,,,,,,0.0
+filete,crudo,Carnes,,,,,,0.0
+lechecillas,crudo,Carnes,,,,,,0.0
+solomillo,crudo,Carnes,,,,,,0.0
+tripas,cocido,Carnes,,,,,,0.0
+Vitamina D (u.i. %) (1) = 42; (2) = 8,,Carnes,,,,,,0.0
+Bistec,crudo,Carnes,,,,,,0.0
+Carne semigrasa,crudo,Carnes,,,,,,0.0
+Costilla,cocido,Carnes,1.77,,14.6,172935.0,"Salami, cooked, beef",72.2
+Falda,cocido,Carnes,,,,,,0.0
+Higado,crudo,Carnes,3.07,,68.1,172415.0,"Goose, liver, raw",71.0
+Lengua,crudo,Carnes,,,,,,0.0
+Promedio,cocido,Carnes,,,,,,0.0
+Riñon,crudo,Carnes,,,,,,0.0
+sangre,crudo,Carnes,,,,,,0.0
+Butifarra,Natural,Embutidos,,,,,,0.0
+Chorizo,natural,Embutidos,1.93,,17.7,174577.0,"Polish sausage, pork",75.0
+Morcilla,natural,Embutidos,,,,,,0.0
+salchicha de cerdo,natural,Embutidos,2.17,,10.8,174614.0,"Frankfurter, beef, heated",78.0
+salchicha de vaca,natural,Embutidos,2.17,,10.8,174614.0,"Frankfurter, beef, heated",78.0
+salchicha de Frankfurt,natural,Embutidos,2.17,,10.8,174614.0,"Frankfurter, beef, heated",78.0
+Salchichon,Natural,Embutidos,,,,,,0.0
+Capon,crudo,Aves,,,,,,0.0
+capon,asado,Aves,,,,,,0.0
+codoriz,crudo,Aves,,,,,,0.0
+Faisan,crudo,Aves,,,,,,0.0
+Gallina Joven,crudo,Aves,,,,,,0.0
+Gallina Vieja,crudo,Aves,,,,,,0.0
+Ganso,crudo,Aves,,,,,,0.0
+Paloma,crudo,Aves,,,,,,0.0
+Pato,crudo,Aves,0.2,,0.9,170076.0,"Dock, raw",82.4
+Pavo,crudo,Aves,3.23,,49.3,171083.0,"Turkey, whole, giblets, raw",74.4
+Perdiz,crudo,Aves,,,,,,0.0
+Pintada,crudo,Aves,,,,,,0.0
+Pollo,crudo,Aves,,,,,,0.0
+Pollo (corazon),crudo,Aves,0.35,,0.7,169145.0,"Beets, raw",66.7
+Pollo (higado),crudo,Aves,3.07,,68.1,172415.0,"Goose, liver, raw",71.0
+Conejo,Crudo,Carnes,,,,,,0.0
+Jabali,Crudo,Carnes,,,,,,0.0
+Liebre,Crudo,Carnes,,,,,,0.0
