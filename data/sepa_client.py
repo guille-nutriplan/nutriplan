@@ -456,15 +456,6 @@ class _SepaCacheManager:
         with self._lock:
             return self._status == 'listo' and self._df is not None
 
-    def get_precios(self, provincia_codigo: str | None = None) -> pd.DataFrame:
-        """
-        Devuelve precios SEPA si están disponibles, o referencia mientras carga.
-        """
-        with self._lock:
-            if self._status == 'listo' and self._df is not None:
-                return self._df.copy()
-        return _precios_referencia()
-
     def fuente(self) -> str:
         with self._lock:
             return 'SEPA' if self._status == 'listo' else 'referencia_local'
