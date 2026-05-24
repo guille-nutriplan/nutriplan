@@ -122,17 +122,23 @@ def _descargar_y_filtrar(url: str, nombre_dia: str) -> pd.DataFrame:
     """
     print(f"  ⬇ Descargando SEPA {nombre_dia} (puede tardar 1-2 minutos)...")
 
-    with requests.get(url, stream=True, timeout=120) as resp:
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (compatible; NutriPlan/2.0; +https://nutriplan-oms.vercel.app)',
+        'Accept': 'application/zip, application/octet-stream, */*',
+        'Accept-Encoding': 'gzip, deflate',
+    }
+
+    with requests.get(url, stream=True, timeout=300, headers=headers) as resp:
         resp.raise_for_status()
 
         # Leer el ZIP completo en memoria (comprimido: ~200-400MB)
         contenido = io.BytesIO()
         descargados = 0
-        for chunk in resp.iter_content(chunk_size=1024 * 1024):  # 1MB chunks
+        for chunk in resp.iter_content(chunk_size=2 * 1024 * 1024):  # 2MB chunks
             contenido.write(chunk)
             descargados += len(chunk)
             if descargados % (50 * 1024 * 1024) == 0:  # cada 50MB
-                print(f"    {descargados // (1024*1024)}MB descargados...")
+                print(f"    [SEPA] {descargados // (1024*1024)}MB descargados...")
 
         contenido.seek(0)
 
@@ -331,9 +337,10 @@ class _SepaCacheManager:
     """
     def __init__(self):
         self._lock    = threading.Lock()
-        self._df      = None           # DataFrame de precios procesados
-        self._status  = 'pendiente'    # pendiente | descargando | listo | error
-        self._mensaje = 'Precios SEPA: pendiente de descarga'
+        self._df      = None
+        self._precios_por_provincia = {}
+        self._status  = 'pendiente'
+        self._mensaje = 'Precios SEPA: cargando...'
         self._actualizado = None
         self._intentos = 0
         self._MAX_INTENTOS = 3
@@ -366,45 +373,87 @@ class _SepaCacheManager:
         with self._lock:
             return 'SEPA' if self._status == 'listo' else 'referencia_local'
 
+    def _cargar_desde_json(self):
+        """
+        Carga precios desde data/precios_sepa.json (generado por actualizar_precios_sepa.py).
+        Este archivo vive en el repo y se despliega automáticamente con cada push.
+        """
+        json_path = Path(__file__).parent / 'precios_sepa.json'
+        if not json_path.exists():
+            raise FileNotFoundError(
+                f"No se encontró {json_path}. "
+                "Corré actualizar_precios_sepa.py en tu máquina local."
+            )
+
+        import json as _json
+        datos = _json.loads(json_path.read_text(encoding='utf-8'))
+        precios_nacionales = datos['precios'].get('nacional', {})
+
+        if not precios_nacionales:
+            raise ValueError("El JSON no tiene precios nacionales.")
+
+        # Convertir a DataFrame compatible con aplicar_precios()
+        rows = [
+            {
+                'GRUPO':               grupo,
+                'PRECIO_MEDIANA_100G': precio,
+                'N_PRODUCTOS':         1,
+                'FUENTE':              'SEPA',
+            }
+            for grupo, precio in precios_nacionales.items()
+        ]
+        df = pd.DataFrame(rows)
+
+        actualizado = datos.get('actualizado', 'desconocido')
+        return df, actualizado, datos.get('precios', {})
+
+    def get_precios(self, provincia_codigo: str | None = None) -> pd.DataFrame:
+        """
+        Devuelve precios SEPA si están disponibles, o referencia mientras carga.
+        Si se especifica provincia, intenta devolver precios provinciales.
+        """
+        with self._lock:
+            if self._status == 'listo' and self._df is not None:
+                # Intentar devolver precios provinciales si están disponibles
+                if provincia_codigo and self._precios_por_provincia:
+                    prov_data = self._precios_por_provincia.get(provincia_codigo)
+                    if prov_data:
+                        rows = [
+                            {'GRUPO': g, 'PRECIO_MEDIANA_100G': p,
+                             'N_PRODUCTOS': 1, 'FUENTE': 'SEPA'}
+                            for g, p in prov_data.items()
+                        ]
+                        return pd.DataFrame(rows)
+                return self._df.copy()
+        return _precios_referencia()
+
     def _descargar(self):
-        """Hilo de descarga. Se ejecuta en background."""
+        """Carga precios desde JSON del repo. Se ejecuta en background."""
         with self._lock:
             self._status  = 'descargando'
-            self._mensaje = 'Descargando precios SEPA del gobierno (puede tardar 2-3 min)...'
+            self._mensaje = 'Cargando precios SEPA...'
             self._intentos += 1
+            self._precios_por_provincia = {}
 
         try:
-            url, nombre_dia = _url_del_dia()
-            print(f"[SEPA] Iniciando descarga: {nombre_dia} (intento {self._intentos})")
-
-            df_raw = _descargar_y_filtrar(url, nombre_dia)
-            df_precios = _procesar_precios(df_raw, None)  # precios nacionales
-
-            # Liberar memoria del raw cuanto antes
-            del df_raw
-            gc.collect()
+            print(f"[SEPA] Cargando precios desde JSON (intento {self._intentos})")
+            df_precios, actualizado, todos_precios = self._cargar_desde_json()
 
             with self._lock:
-                self._df       = df_precios
-                self._status   = 'listo'
-                self._actualizado = datetime.now().strftime('%d/%m/%Y %H:%M')
-                self._mensaje  = f'Precios SEPA actualizados: {self._actualizado}'
+                self._df                   = df_precios
+                self._precios_por_provincia = todos_precios
+                self._status               = 'listo'
+                self._actualizado          = actualizado
+                self._mensaje              = f'Precios SEPA: {actualizado[:10]}'
 
-            print(f"[SEPA] ✓ Precios cargados: {self._actualizado}")
+            print(f"[SEPA] ✓ Precios cargados del {actualizado[:10]}")
 
         except Exception as e:
-            msg = f'Error SEPA: {str(e)[:120]}'
+            msg = f'Error SEPA: {type(e).__name__}: {str(e)[:200]}'
             with self._lock:
                 self._status  = 'error'
                 self._mensaje = msg + '. Usando precios de referencia.'
             print(f"[SEPA] ⚠ {msg}")
-
-            # Reintentar en 10 minutos si quedan intentos
-            if self._intentos < self._MAX_INTENTOS:
-                print(f"[SEPA] Reintentando en 10 minutos...")
-                t = threading.Timer(600, self._descargar)
-                t.daemon = True
-                t.start()
 
     def iniciar(self, delay_segundos: int = 5):
         """
@@ -422,19 +471,7 @@ class _SepaCacheManager:
         print(f"[SEPA] Descarga programada en {delay_segundos}s")
 
     def programar_refresco(self, intervalo_horas: int = 24):
-        """Programa un refresco periódico del caché."""
-        def _refrescar():
-            import time
-            time.sleep(intervalo_horas * 3600)
-            print("[SEPA] Iniciando refresco periódico...")
-            with self._lock:
-                self._intentos = 0
-            self._descargar()
-            self.programar_refresco(intervalo_horas)
-
-        t = threading.Thread(target=_refrescar, daemon=True)
-        t.name = 'sepa-refresher'
-        t.start()
+        """No necesario con JSON en repo — el refresco ocurre al hacer deploy."""
 
 
 # Instancia global — se importa desde main.py
