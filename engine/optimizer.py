@@ -407,40 +407,43 @@ def optimizar_dieta(
         'SELENIO_g': 300 / 100,
         'ZINC_g':   40 / 100,
     }
-    for col_n, min_val, ub_val in [
-        ('CAL_g',   req['energia_min'] / 100,    req['energia_max'] / 100),
-        ('PR_g',    req['proteinas_min'] / 100,  None),
-        ('GR_g',    req['grasas_min'] / 100,     req['grasas_max'] / 100),
-        ('HC_g',    req['hc_min'] / 100,         req.get('hc_max', req['hc_min'] * 4) / 100),
-        ('CA_g',    req['calc_min'] / 100,        None),
-        ('FE_g',    req['hierro_min'] / 100,     UL['FE_g']),
-        ('VIT_A_g', req['vit_a_min_ui'] / 100,  UL['VIT_A_g']),
-        ('VIT_C_g', req['vit_c_min'] / 100,      None),
-        ('VIT_B1_g',req['vit_b1_min'] / 100,     None),
-        ('VIT_B2_g',req['vit_b2_min'] / 100,     None),
-        ('FIBRA_g', req.get('fibra_min', 25) / 100, None),
-        ('ZINC_g',  req.get('zinc_min', 8) / 100,   UL['ZINC_g']),
-        ('SELENIO_g',req.get('selenio_min', 55) / 100, UL['SELENIO_g']),
-    ]:
-        if col_n not in df.columns:
+    # Objetivos y pesos de penalización por nutriente
+    # objetivo: nivel "ideal" - LP penaliza superarlo
+    # peso: cuánto pesa en el objetivo (mayor = más fuerte la penalización)
+    NUTRIENTES_PENALIZAR_DEF = [
+        # (col, mínimo/100,                          máximo_duro/100,            objetivo_mult, peso)
+        ('CAL_g',    req['energia_min']/100,    req['energia_max']/100,       1.0,   2.0),
+        ('PR_g',     req['proteinas_min']/100,  None,                         1.2,   3.0),  # proteínas: target 120%
+        ('GR_g',     req['grasas_min']/100,     req['grasas_max']/100,        0.9,   2.0),
+        ('HC_g',     req['hc_min']/100,         req.get('hc_max', req['hc_min']*4)/100, 1.3, 3.0),  # HC: target 130%
+        ('CA_g',     req['calc_min']/100,       None,                         1.3,   1.5),
+        ('FE_g',     req['hierro_min']/100,     UL['FE_g'],                   1.2,   2.0),
+        ('VIT_A_g',  req['vit_a_min_ui']/100,  UL['VIT_A_g'],                1.1,   4.0),  # Vit A: target 110%, peso alto
+        ('VIT_C_g',  req['vit_c_min']/100,     None,                         1.5,   1.0),  # C: inofensivo, peso bajo
+        ('VIT_B1_g', req['vit_b1_min']/100,    None,                         1.5,   1.0),
+        ('VIT_B2_g', req['vit_b2_min']/100,    None,                         1.5,   1.0),
+        ('FIBRA_g',  req.get('fibra_min',25)/100, None,                      1.5,   1.0),
+        ('ZINC_g',   req.get('zinc_min',8)/100,   UL['ZINC_g'],              1.3,   1.5),
+        ('SELENIO_g',req.get('selenio_min',55)/100, UL['SELENIO_g'],         1.3,   1.5),
+    ]
+
+    for col_n, min_val, ub_val, mult, peso in NUTRIENTES_PENALIZAR_DEF:
+        if col_n not in df.columns or min_val <= 0:
             continue
-        if min_val <= 0:
-            continue
-        # Objetivo: 1.5× mínimo, sin superar UL × 0.85
-        objetivo = min_val * 1.5
+        objetivo = min_val * mult
         if ub_val:
             objetivo = min(objetivo, ub_val * 0.85)
-        NUTRIENTES_PENALIZAR.append((col_n, objetivo))
+        NUTRIENTES_PENALIZAR.append((col_n, objetivo, peso))
 
-    k = len(NUTRIENTES_PENALIZAR)  # número de variables de exceso
+    k = len(NUTRIENTES_PENALIZAR)
 
-    # Coeficiente de penalización λ: ~15% del costo promedio diario normalizado
+    # λ más fuerte: 25% del presupuesto de costo
     precio_medio = float(np.mean(c[c > 0])) if np.any(c > 0) else 1.0
-    lambda_pen = precio_medio * n * 0.15 / max(k, 1)
+    lambda_base = precio_medio * n * 0.25 / max(k, 1)
 
     # Extender vector de costos: [costos alimentos, penalización excesos]
-    pen_coefs = np.array([lambda_pen / max(obj * 100, 1e-6)
-                          for _, obj in NUTRIENTES_PENALIZAR])
+    pen_coefs = np.array([lambda_base * peso / max(obj * 100, 1e-6)
+                          for _, obj, peso in NUTRIENTES_PENALIZAR])
     c_ext = np.concatenate([c, pen_coefs])
 
     # Extender A_ub: columnas de exceso son 0 para restricciones existentes
@@ -448,7 +451,7 @@ def optimizar_dieta(
     A_ub_base = np.column_stack([np.array(A_ub_rows), zeros_k])
 
     # Agregar restricciones de exceso: nut_j × x - e_j ≤ objetivo_j
-    for j, (col_n, objetivo) in enumerate(NUTRIENTES_PENALIZAR):
+    for j, (col_n, objetivo, _peso) in enumerate(NUTRIENTES_PENALIZAR):
         nut_row = col_g(col_n)
         slack_row = np.zeros(k)
         slack_row[j] = -1.0  # -e_j

@@ -119,6 +119,7 @@ class ReqOMS(BaseModel):
     vit_c_min:    float
     vit_b1_min:   float
     vit_b2_min:   float
+    hc_max:       float
     fibra_min:    float
     zinc_min:     float
     yodo_min:     float
@@ -248,6 +249,7 @@ def calcular_plan(body: PlanRequest):
                 hierro_min=req["hierro_min"], vit_a_min_ui=req["vit_a_min_ui"],
                 vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
                 vit_b2_min=req["vit_b2_min"],
+                hc_max=req.get("hc_max", req.get("hc_min", 130) * 4),
                 fibra_min=req.get("fibra_min", 0),
                 zinc_min=req.get("zinc_min", 0),
                 yodo_min=req.get("yodo_min", 0),
@@ -306,6 +308,7 @@ def calcular_plan(body: PlanRequest):
             hierro_min=req["hierro_min"], vit_a_min_ui=req["vit_a_min_ui"],
             vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
             vit_b2_min=req["vit_b2_min"],
+                hc_max=req.get("hc_max", req.get("hc_min", 130) * 4),
                 fibra_min=req.get("fibra_min", 0),
                 zinc_min=req.get("zinc_min", 0),
                 yodo_min=req.get("yodo_min", 0),
