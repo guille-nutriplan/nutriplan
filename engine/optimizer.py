@@ -387,13 +387,95 @@ def optimizar_dieta(
                 break
         bounds.append((0, max_g))
 
-    A_ub = np.array(A_ub_rows)
-    b_ub = np.array(b_ub_rows)
+    # ── LP extendido con penalización de excesos ─────────────────────────────
+    # Variables: [x_1..x_n, e_1..e_k] donde e_j = exceso sobre objetivo_j
+    #
+    # Objetivo: minimizar costo + λ × Σ(e_j / objetivo_j)
+    #
+    # Para cada nutriente con objetivo blando:
+    #   Σ(nut_ij × x_i) - e_j ≤ objetivo_j  →  e_j ≥ aporte_j - objetivo_j
+    #   e_j ≥ 0
+    #
+    # Esto hace que el LP prefiera dietas equilibradas sin sacrificar
+    # el cumplimiento de los requerimientos mínimos.
+
+    # Nutrientes a penalizar y sus objetivos (1.5× mínimo, salvo UL)
+    NUTRIENTES_PENALIZAR = []
+    UL = {
+        'VIT_A_g':  10000 / 100,  # UL 10000 UI → /100g
+        'FE_g':     45 / 100,
+        'SELENIO_g': 300 / 100,
+        'ZINC_g':   40 / 100,
+    }
+    for col_n, min_val, ub_val in [
+        ('CAL_g',   req['energia_min'] / 100,    req['energia_max'] / 100),
+        ('PR_g',    req['proteinas_min'] / 100,  None),
+        ('GR_g',    req['grasas_min'] / 100,     req['grasas_max'] / 100),
+        ('HC_g',    req['hc_min'] / 100,         req.get('hc_max', req['hc_min'] * 4) / 100),
+        ('CA_g',    req['calc_min'] / 100,        None),
+        ('FE_g',    req['hierro_min'] / 100,     UL['FE_g']),
+        ('VIT_A_g', req['vit_a_min_ui'] / 100,  UL['VIT_A_g']),
+        ('VIT_C_g', req['vit_c_min'] / 100,      None),
+        ('VIT_B1_g',req['vit_b1_min'] / 100,     None),
+        ('VIT_B2_g',req['vit_b2_min'] / 100,     None),
+        ('FIBRA_g', req.get('fibra_min', 25) / 100, None),
+        ('ZINC_g',  req.get('zinc_min', 8) / 100,   UL['ZINC_g']),
+        ('SELENIO_g',req.get('selenio_min', 55) / 100, UL['SELENIO_g']),
+    ]:
+        if col_n not in df.columns:
+            continue
+        if min_val <= 0:
+            continue
+        # Objetivo: 1.5× mínimo, sin superar UL × 0.85
+        objetivo = min_val * 1.5
+        if ub_val:
+            objetivo = min(objetivo, ub_val * 0.85)
+        NUTRIENTES_PENALIZAR.append((col_n, objetivo))
+
+    k = len(NUTRIENTES_PENALIZAR)  # número de variables de exceso
+
+    # Coeficiente de penalización λ: ~15% del costo promedio diario normalizado
+    precio_medio = float(np.mean(c[c > 0])) if np.any(c > 0) else 1.0
+    lambda_pen = precio_medio * n * 0.15 / max(k, 1)
+
+    # Extender vector de costos: [costos alimentos, penalización excesos]
+    pen_coefs = np.array([lambda_pen / max(obj * 100, 1e-6)
+                          for _, obj in NUTRIENTES_PENALIZAR])
+    c_ext = np.concatenate([c, pen_coefs])
+
+    # Extender A_ub: columnas de exceso son 0 para restricciones existentes
+    zeros_k = np.zeros((len(A_ub_rows), k))
+    A_ub_base = np.column_stack([np.array(A_ub_rows), zeros_k])
+
+    # Agregar restricciones de exceso: nut_j × x - e_j ≤ objetivo_j
+    for j, (col_n, objetivo) in enumerate(NUTRIENTES_PENALIZAR):
+        nut_row = col_g(col_n)
+        slack_row = np.zeros(k)
+        slack_row[j] = -1.0  # -e_j
+        A_ub_base = np.vstack([
+            A_ub_base,
+            np.concatenate([nut_row, slack_row])
+        ])
+        b_ub_rows.append(objetivo * 100)  # objetivo en unidades absolutas
+
+    b_ub_ext = np.array(b_ub_rows)
+
+    # Bounds extendidos: [alimentos 0..max_g, excesos 0..∞]
+    bounds_ext = bounds + [(0, None)] * k
+
+    A_ub = A_ub_base
+    b_ub = b_ub_ext
 
     res = linprog(
-        c=c, A_ub=A_ub, b_ub=b_ub, bounds=bounds,
-        method='highs', options={'disp': False, 'time_limit': 30.0}
+        c=c_ext, A_ub=A_ub, b_ub=b_ub, bounds=bounds_ext,
+        method='highs', options={'disp': False, 'time_limit': 45.0}
     )
+
+    # Extraer solo las variables de alimentos (descartar excesos)
+    if res.success:
+        res_x_original = res.x[:n]
+    else:
+        res_x_original = None
 
     if not res.success:
         return ResultadoOptimizacion(
@@ -409,9 +491,10 @@ def optimizar_dieta(
             infactibilidad_detalle=res.message,
         )
 
-    # ── Procesar resultado ────────────────────────────────────────────────────
+    # ── Procesar resultado (solo variables de alimentos, sin excesos) ─────────
+    res_x_food = res.x[:n]  # descartar variables de holgura de exceso
     df_res = df.copy()
-    df_res['GRAMOS'] = res.x
+    df_res['GRAMOS'] = res_x_food
     df_res = df_res[df_res['GRAMOS'] >= 2.0].copy()
 
     nutrientes_calc = [
