@@ -485,3 +485,238 @@ def calcular_plan_familia(body: FamiliaRequest):
         costo_mensual_total=round(costo_mensual_total, 0),
         fuente_precios=fuente,
     )
+import pandas as _pd
+
+
+# ─── Analizador inverso ───────────────────────────────────────────────────────
+
+@app.get("/api/alimentos", tags=["Analizador"])
+def get_alimentos(q: str = ""):
+    """
+    Lista de alimentos disponibles para el analizador inverso.
+    Filtra por nombre si se pasa el parámetro q.
+    """
+    df = DF_BASE[DF_BASE['DISPONIBLE'] == True].copy()
+    if q and len(q) >= 2:
+        mask = df['NOMBRE_COMPLETO'].str.lower().str.contains(
+            q.lower(), na=False)
+        df = df[mask]
+    return {
+        "alimentos": [
+            {
+                "nombre":          row["ALIMENTO"],
+                "nombre_completo": row["NOMBRE_COMPLETO"],
+                "grupo":           row["GRUPO"],
+                "cal_100g":        round(row["CAL"], 1) if not _pd.isna(row["CAL"]) else 0,
+            }
+            for _, row in df.head(80).iterrows()
+        ]
+    }
+
+
+class AlimentoAnalisis(BaseModel):
+    nombre:          str
+    nombre_completo: Optional[str] = None
+    gramos:          float = Field(..., gt=0)
+
+
+class AnalisisRequest(BaseModel):
+    rango_etario: str
+    alimentos:    list[AlimentoAnalisis] = Field(..., min_length=1)
+
+
+class ItemAnalisis(BaseModel):
+    nombre:      str
+    grupo:       str
+    gramos:      float
+    aporte_cal:  float
+    aporte_pr:   float
+    aporte_gr:   float
+    aporte_hc:   float
+    aporte_ca:   float
+    aporte_fe:   float
+    aporte_vitc: float
+
+
+class ComparacionNutriente(BaseModel):
+    nutriente:  str
+    unidad:     str
+    aporte:     float
+    minimo:     float
+    maximo:     Optional[float]
+    pct:        float
+    estado:     str   # 'ok' | 'bajo' | 'exceso'
+
+
+class AnalisisResponse(BaseModel):
+    exito:         bool
+    mensaje:       str
+    rango_label:   str
+    n_alimentos:   int
+    gramos_total:  float
+    costo_total:   Optional[float]
+    items:         list[ItemAnalisis]
+    aportes:       AportesNutricionales
+    req_oms:       ReqOMS
+    comparacion:   list[ComparacionNutriente]
+
+
+@app.post("/api/analizar", response_model=AnalisisResponse, tags=["Analizador"])
+def analizar_dieta(body: AnalisisRequest):
+    """
+    Analiza una lista de alimentos con sus gramos y devuelve
+    el perfil nutricional comparado con los requerimientos OMS.
+    """
+    if body.rango_etario not in WHO_REQUIREMENTS:
+        raise HTTPException(status_code=400,
+            detail=f"Rango etario '{body.rango_etario}' no válido.")
+
+    req = WHO_REQUIREMENTS[body.rango_etario]
+    df  = DF_BASE[DF_BASE['DISPONIBLE'] == True].copy()
+
+    # Aplicar precios de referencia para costos aproximados
+    from data.sepa_client import _precios_referencia, aplicar_precios
+    df = aplicar_precios(df, _precios_referencia())
+
+    items_out  = []
+    aportes_acc = {k: 0.0 for k in [
+        'energia_kcal','proteinas_g','grasas_g','hc_g','calcio_mg',
+        'hierro_mg','vit_a_ui','vit_c_mg','vit_b1_mg','vit_b2_mg',
+        'fibra_g','zinc_mg','yodo_ug','selenio_ug','gramos_total',
+    ]}
+    costo_total = 0.0
+    no_encontrados = []
+
+    for alim in body.alimentos:
+        # Buscar en tabla por nombre exacto o parcial
+        mask = df['ALIMENTO'].str.lower() == alim.nombre.lower()
+        if not mask.any():
+            mask = df['ALIMENTO'].str.lower().str.contains(
+                alim.nombre.lower(), na=False)
+        if not mask.any():
+            no_encontrados.append(alim.nombre)
+            continue
+
+        row = df[mask].iloc[0]
+        g   = alim.gramos
+
+        def get(col):
+            v = row.get(col, 0)
+            return float(v) if not _pd.isna(v) else 0.0
+
+        aporte_cal  = get('CAL_g')  * g
+        aporte_pr   = get('PR_g')   * g
+        aporte_gr   = get('GR_g')   * g
+        aporte_hc   = get('HC_g')   * g
+        aporte_ca   = get('CA_g')   * g
+        aporte_fe   = get('FE_g')   * g
+        aporte_va   = get('VIT_A_g')  * g
+        aporte_vc   = get('VIT_C_g')  * g
+        aporte_vb1  = get('VIT_B1_g') * g
+        aporte_vb2  = get('VIT_B2_g') * g
+        aporte_fib  = get('FIBRA_g') * g
+        aporte_zn   = get('ZINC_g')  * g
+        aporte_yo   = get('YODO_g')  * g if 'YODO_g' in df.columns else 0
+        aporte_se   = get('SELENIO_g') * g if 'SELENIO_g' in df.columns else 0
+        precio_g    = get('PRECIO_g')
+        costo_item  = precio_g * g if precio_g > 0 else 0
+
+        aportes_acc['energia_kcal']  += aporte_cal
+        aportes_acc['proteinas_g']   += aporte_pr
+        aportes_acc['grasas_g']      += aporte_gr
+        aportes_acc['hc_g']          += aporte_hc
+        aportes_acc['calcio_mg']     += aporte_ca
+        aportes_acc['hierro_mg']     += aporte_fe
+        aportes_acc['vit_a_ui']      += aporte_va
+        aportes_acc['vit_c_mg']      += aporte_vc
+        aportes_acc['vit_b1_mg']     += aporte_vb1
+        aportes_acc['vit_b2_mg']     += aporte_vb2
+        aportes_acc['fibra_g']       += aporte_fib
+        aportes_acc['zinc_mg']       += aporte_zn
+        aportes_acc['yodo_ug']       += aporte_yo
+        aportes_acc['selenio_ug']    += aporte_se
+        aportes_acc['gramos_total']  += g
+        costo_total += costo_item
+
+        items_out.append(ItemAnalisis(
+            nombre     = row['NOMBRE_COMPLETO'],
+            grupo      = row['GRUPO'],
+            gramos     = round(g, 1),
+            aporte_cal = round(aporte_cal, 1),
+            aporte_pr  = round(aporte_pr, 1),
+            aporte_gr  = round(aporte_gr, 1),
+            aporte_hc  = round(aporte_hc, 1),
+            aporte_ca  = round(aporte_ca, 1),
+            aporte_fe  = round(aporte_fe, 2),
+            aporte_vitc = round(aporte_vc, 1),
+        ))
+
+    if not items_out:
+        raise HTTPException(status_code=404,
+            detail=f"No se encontraron los alimentos: {no_encontrados}")
+
+    # Comparación vs OMS
+    def estado(val, minimo, maximo=None):
+        if minimo > 0 and val / minimo < 0.9:  return 'bajo'
+        if maximo and val > maximo * 1.1:       return 'exceso'
+        return 'ok'
+
+    def pct(val, minimo):
+        return round(val / minimo * 100, 1) if minimo > 0 else 100.0
+
+    ap = aportes_acc
+    comparacion = [
+        ComparacionNutriente(nutriente='Energía',      unidad='kcal', aporte=round(ap['energia_kcal'],1),  minimo=req['energia_min'],  maximo=req['energia_max'],  pct=pct(ap['energia_kcal'],req['energia_min']),  estado=estado(ap['energia_kcal'],req['energia_min'],req['energia_max'])),
+        ComparacionNutriente(nutriente='Proteínas',    unidad='g',    aporte=round(ap['proteinas_g'],1),   minimo=req['proteinas_min'],maximo=None,                pct=pct(ap['proteinas_g'],req['proteinas_min']), estado=estado(ap['proteinas_g'],req['proteinas_min'])),
+        ComparacionNutriente(nutriente='Grasas',       unidad='g',    aporte=round(ap['grasas_g'],1),      minimo=req['grasas_min'],   maximo=req['grasas_max'],   pct=pct(ap['grasas_g'],req['grasas_min']),       estado=estado(ap['grasas_g'],req['grasas_min'],req['grasas_max'])),
+        ComparacionNutriente(nutriente='Carbohidratos',unidad='g',    aporte=round(ap['hc_g'],1),          minimo=req['hc_min'],       maximo=None,                pct=pct(ap['hc_g'],req['hc_min']),               estado=estado(ap['hc_g'],req['hc_min'])),
+        ComparacionNutriente(nutriente='Fibra',        unidad='g',    aporte=round(ap['fibra_g'],1),       minimo=req.get('fibra_min',25), maximo=None,            pct=pct(ap['fibra_g'],req.get('fibra_min',25)),  estado=estado(ap['fibra_g'],req.get('fibra_min',25))),
+        ComparacionNutriente(nutriente='Calcio',       unidad='mg',   aporte=round(ap['calcio_mg'],1),     minimo=req['calc_min'],     maximo=None,                pct=pct(ap['calcio_mg'],req['calc_min']),         estado=estado(ap['calcio_mg'],req['calc_min'])),
+        ComparacionNutriente(nutriente='Hierro',       unidad='mg',   aporte=round(ap['hierro_mg'],2),     minimo=req['hierro_min'],   maximo=None,                pct=pct(ap['hierro_mg'],req['hierro_min']),       estado=estado(ap['hierro_mg'],req['hierro_min'])),
+        ComparacionNutriente(nutriente='Vitamina A',   unidad='UI',   aporte=round(ap['vit_a_ui'],0),      minimo=req['vit_a_min_ui'], maximo=None,                pct=pct(ap['vit_a_ui'],req['vit_a_min_ui']),     estado=estado(ap['vit_a_ui'],req['vit_a_min_ui'])),
+        ComparacionNutriente(nutriente='Vitamina C',   unidad='mg',   aporte=round(ap['vit_c_mg'],1),      minimo=req['vit_c_min'],    maximo=None,                pct=pct(ap['vit_c_mg'],req['vit_c_min']),         estado=estado(ap['vit_c_mg'],req['vit_c_min'])),
+        ComparacionNutriente(nutriente='Zinc',         unidad='mg',   aporte=round(ap['zinc_mg'],2),       minimo=req.get('zinc_min',8), maximo=None,              pct=pct(ap['zinc_mg'],req.get('zinc_min',8)),    estado=estado(ap['zinc_mg'],req.get('zinc_min',8))),
+    ]
+
+    mensaje = "Análisis completado"
+    if no_encontrados:
+        mensaje += f". No encontrados: {', '.join(no_encontrados)}"
+
+    return AnalisisResponse(
+        exito        = True,
+        mensaje      = mensaje,
+        rango_label  = req['label'],
+        n_alimentos  = len(items_out),
+        gramos_total = round(ap['gramos_total'], 0),
+        costo_total  = round(costo_total, 0) if costo_total > 0 else None,
+        items        = items_out,
+        aportes      = AportesNutricionales(
+            energia_kcal = round(ap['energia_kcal'],1),
+            proteinas_g  = round(ap['proteinas_g'],1),
+            grasas_g     = round(ap['grasas_g'],1),
+            hc_g         = round(ap['hc_g'],1),
+            calcio_mg    = round(ap['calcio_mg'],1),
+            hierro_mg    = round(ap['hierro_mg'],2),
+            vit_a_ui     = round(ap['vit_a_ui'],0),
+            vit_c_mg     = round(ap['vit_c_mg'],1),
+            vit_b1_mg    = round(ap['vit_b1_mg'],2),
+            vit_b2_mg    = round(ap['vit_b2_mg'],2),
+            fibra_g      = round(ap['fibra_g'],1),
+            gramos_total = round(ap['gramos_total'],0),
+            zinc_mg      = round(ap['zinc_mg'],2),
+            yodo_ug      = round(ap['yodo_ug'],1),
+            selenio_ug   = round(ap['selenio_ug'],1),
+        ),
+        req_oms = ReqOMS(
+            energia_min=req['energia_min'], energia_max=req['energia_max'],
+            proteinas_min=req['proteinas_min'],
+            grasas_min=req['grasas_min'], grasas_max=req['grasas_max'],
+            hc_min=req['hc_min'], calc_min=req['calc_min'],
+            hierro_min=req['hierro_min'], vit_a_min_ui=req['vit_a_min_ui'],
+            vit_c_min=req['vit_c_min'], vit_b1_min=req['vit_b1_min'],
+            vit_b2_min=req['vit_b2_min'], fibra_min=req.get('fibra_min',0),
+            zinc_min=req.get('zinc_min',0), yodo_min=req.get('yodo_min',0),
+            selenio_min=req.get('selenio_min',0),
+        ),
+        comparacion = comparacion,
+    )
