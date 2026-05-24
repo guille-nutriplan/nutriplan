@@ -120,10 +120,17 @@ class ReqOMS(BaseModel):
     vit_b1_min:   float
     vit_b2_min:   float
     hc_max:       float
-    fibra_min:    float
+    fibra_max:    float = 50.0
+    calc_max:     float = 2500.0
+    hierro_max:   float = 45.0
+    vit_a_max_ui: float = 10000.0
+    vit_c_max:    float = 2000.0
     zinc_min:     float
+    zinc_max:     float = 40.0
     yodo_min:     float
+    yodo_max:     float = 600.0
     selenio_min:  float
+    selenio_max:  float = 300.0
 
 
 class PlanResponse(BaseModel):
@@ -250,10 +257,17 @@ def calcular_plan(body: PlanRequest):
                 vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
                 vit_b2_min=req["vit_b2_min"],
                 hc_max=req.get("hc_max", req.get("hc_min", 130) * 4),
-                fibra_min=req.get("fibra_min", 0),
+                fibra_max=req.get("fibra_max", 50),
+                calc_max=req.get("calc_max", 2500),
+                hierro_max=req.get("hierro_max", 45),
+                vit_a_max_ui=req.get("vit_a_max_ui", 10000),
+                vit_c_max=req.get("vit_c_max", 2000),
                 zinc_min=req.get("zinc_min", 0),
+                zinc_max=req.get("zinc_max", 40),
                 yodo_min=req.get("yodo_min", 0),
+                yodo_max=req.get("yodo_max", 600),
                 selenio_min=req.get("selenio_min", 0),
+                selenio_max=req.get("selenio_max", 300),
             ),
             costo_diario=0,
             costo_mensual=0,
@@ -309,10 +323,17 @@ def calcular_plan(body: PlanRequest):
             vit_c_min=req["vit_c_min"], vit_b1_min=req["vit_b1_min"],
             vit_b2_min=req["vit_b2_min"],
                 hc_max=req.get("hc_max", req.get("hc_min", 130) * 4),
-                fibra_min=req.get("fibra_min", 0),
+                fibra_max=req.get("fibra_max", 50),
+                calc_max=req.get("calc_max", 2500),
+                hierro_max=req.get("hierro_max", 45),
+                vit_a_max_ui=req.get("vit_a_max_ui", 10000),
+                vit_c_max=req.get("vit_c_max", 2000),
                 zinc_min=req.get("zinc_min", 0),
+                zinc_max=req.get("zinc_max", 40),
                 yodo_min=req.get("yodo_min", 0),
+                yodo_max=req.get("yodo_max", 600),
                 selenio_min=req.get("selenio_min", 0),
+                selenio_max=req.get("selenio_max", 300),
         ),
         costo_diario=round(resultado.costo_total, 0),
         costo_mensual=round(resultado.costo_mensual, 0),
