@@ -123,6 +123,8 @@ EXCLUIR_ALIMENTOS = {
     'majuela',
     # Derivados industriales del aceite
     'aceite higado bacalao',    # suplemento, no aceite de cocina
+    # Notas al pie del Excel original — se filtraron como alimentos por error
+    'vitamina d',          # líneas de notas sobre vitamina D en unidades internacionales
     # Sustitutos de bebida / no alimentos base
     'achicoria (tostada)',      # sustituto del café, no vegetal de consumo masivo
                                 # Además tiene dato de Fe (58 mg/100g) claramente erróneo
@@ -272,6 +274,25 @@ DICT_ES_AR = {
     'pan de debada':    'pan de cebada',
     'magdalena':        'muffin',
     'magdalenas':       'muffins',
+    # Abreviaciones del Excel original
+    'leche vaca condens.': 'leche condensada',
+    'leche vaca cond.':    'leche condensada',
+    'leche vaca concent.': 'leche concentrada',
+    'leche devaca':        'leche de vaca',
+    'leche deoveja':       'leche de oveja',
+    'condens.':            'condensada',
+    'concent.':            'concentrada',
+    'desn.':               'descremada',
+    'semimagr.':           'semigrasa',
+    # Palabras pegadas sin espacio
+    'devaca':              'de vaca',
+    'deoveja':             'de oveja',
+    'demaiz':              'de maíz',
+    # Quesos con nombres poco conocidos en Argentina
+    'requeson':            'ricota',
+    'queso brugos':        'queso fresco',
+    'queso gervaia':       'queso crema',
+    'queso emmertal':      'queso gruyere',
     # Otros
     'zumo':             'jugo',
     'maíz':             'maíz',
@@ -282,23 +303,19 @@ DICT_ES_AR = {
 
 def traducir_nombre_ar(nombre: str) -> str:
     """
-    Traduce un nombre de alimento de español de España a español rioplatense.
-    Aplica reemplazos por palabra completa (case-insensitive).
-    Prioriza los términos más largos para evitar reemplazos parciales incorrectos.
+    Traduce nombres de alimentos de español de España a español rioplatense.
+    Aplica reemplazos del diccionario DICT_ES_AR, de mayor a menor longitud.
     """
-    import re as _re
     resultado = nombre
-
-    # Ordenar por longitud descendente (más específico primero)
     for es, ar in sorted(DICT_ES_AR.items(), key=lambda x: len(x[0]), reverse=True):
-        patron = r'(?i)\b' + _re.escape(es) + r'\b'
-        resultado = _re.sub(patron, ar, resultado)
-
-    # Capitalizar primera letra si el original tenía mayúscula
+        low = resultado.lower()
+        idx = low.find(es.lower())
+        if idx != -1:
+            resultado = resultado[:idx] + ar + resultado[idx + len(es):]
     if nombre and nombre[0].isupper() and resultado and resultado[0].islower():
         resultado = resultado[0].upper() + resultado[1:]
-
     return resultado
+
 
 
 def _limpiar_valor(val):
@@ -320,6 +337,12 @@ def _es_excluido(alimento: str, estado: str, grupo: str) -> bool:
     """Determina si un alimento debe marcarse como no disponible."""
     alimento_l = alimento.lower().strip()
     estado_l   = estado.lower().strip() if estado else ''
+
+    # Excluir notas al pie (contienen "vitamina d" o "u.i." o paréntesis de referencia)
+    if 'vitamina d' in alimento_l or 'u.i.' in alimento_l:
+        return True
+    if len(alimento_l) > 80:  # líneas muy largas son notas, no alimentos
+        return True
 
     # Exclusión por nombre completo (nombre + estado)
     nombre_completo = f"{alimento_l} ({estado_l})" if estado_l else alimento_l
