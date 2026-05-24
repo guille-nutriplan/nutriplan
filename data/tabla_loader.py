@@ -183,6 +183,124 @@ ESTADOS_NORMALES_SECOS = {
 GRUPOS_SECOS_NORMALES = {'FrutosSecos'}
 
 
+
+# ─── Diccionario español de España → español rioplatense ─────────────────────
+# Se aplica SOLO al campo NOMBRE_COMPLETO (display) — no al campo ALIMENTO
+# para no afectar el matching del LP ni el enriquecimiento USDA.
+# Orden: más específico primero. Reemplazos por palabra completa (case-insensitive).
+
+DICT_ES_AR = {
+    # Vegetales / Hortalizas
+    'patata':           'papa',
+    'patatas':          'papas',
+    'boniato':          'batata',
+    'calabacín':        'zapallito',
+    'calabacin':        'zapallito',
+    'pimiento':         'morrón',
+    'pimientos':        'morrones',
+    'col de bruselas':  'repollitos de Bruselas',
+    'col debruselas':   'repollitos de Bruselas',
+    'col rizada':       'kale',
+    'col':              'repollo',
+    'judías verdes':    'chauchas',
+    'judias verdes':    'chauchas',
+    'judías blancas':   'porotos blancos',
+    'judias blancas':   'porotos blancos',
+    'judías rojas':     'porotos rojos',
+    'judias rojas':     'porotos rojos',
+    'judías':           'porotos',
+    'judias':           'porotos',
+    'guisantes':        'arvejas',
+    'habichuelas':      'chauchas',
+    'berberecho':       'berberecho',
+    'acelga':           'acelga',
+    'escarola':         'escarola',
+    'endibia':          'endibia',
+    'remolacha':        'remolacha',
+    'nabo':             'nabo',
+    'chirivía':         'chirivía',
+    'chirivia':         'chirivía',
+    # Frutas
+    'melocotón':        'durazno',
+    'melocoton':        'durazno',
+    'melocotones':      'duraznos',
+    'albaricoque':      'damasco',
+    'albaricoques':     'damascos',
+    'fresa':            'frutilla',
+    'fresas':           'frutillas',
+    'fresón':           'frutilla grande',
+    'freson':           'frutilla grande',
+    'frambuesa':        'frambuesa',
+    'ciruela':          'ciruela',
+    'aguacate':         'palta',
+    'aguacates':        'paltas',
+    'cacahuete':        'maní',
+    'cacahuetes':       'maní',
+    'piñón':            'piñón',
+    'níspero':          'níspero',
+    'nispero':          'níspero',
+    'membrillo':        'membrillo',
+    'higo':             'higo',
+    'granada':          'granada',
+    'pomelo':           'pomelo',
+    # Proteínas animales
+    'ternera':          'ternera/novillo',
+    'bacalao':          'abadejo',
+    'rape':             'merluza',
+    'lubina':           'róbalo',
+    'dorada':           'dorado',
+    'gamba':            'langostino',
+    'gambas':           'langostinos',
+    'langosta':         'langosta',
+    'mejillón':         'mejillón',
+    'mejillones':       'mejillones',
+    'almeja':           'almeja',
+    'almejas':          'almejas',
+    'calamar':          'calamar',
+    'pulpo':            'pulpo',
+    'jamón serrano':    'jamón crudo',
+    'salchichón':       'salame',
+    'butifarra':        'chorizo criollo',
+    'morcilla':         'morcilla',
+    # Lácteos y derivados
+    'nata':             'crema',
+    'mantequilla':      'manteca',
+    'mahonesa':         'mayonesa',
+    'mayonesa':         'mayonesa',
+    # Cereales y panificados
+    'pan de molde':     'pan lactal',
+    'pan de debada':    'pan de cebada',
+    'magdalena':        'muffin',
+    'magdalenas':       'muffins',
+    # Otros
+    'zumo':             'jugo',
+    'maíz':             'maíz',
+    'maiz':             'maíz',
+    'cacau':            'cacao',
+}
+
+
+def traducir_nombre_ar(nombre: str) -> str:
+    """
+    Traduce un nombre de alimento de español de España a español rioplatense.
+    Aplica reemplazos por palabra completa (case-insensitive).
+    Prioriza los términos más largos para evitar reemplazos parciales incorrectos.
+    """
+    import re as _re
+    resultado = nombre
+
+    # Ordenar por longitud descendente (más específico primero)
+    for es, ar in sorted(DICT_ES_AR.items(), key=lambda x: len(x[0]), reverse=True):
+        patron = r'(?i)\b' + _re.escape(es) + r'\b'
+        resultado = _re.sub(patron, ar, resultado)
+
+    # Capitalizar primera letra si el original tenía mayúscula
+    if nombre and nombre[0].isupper() and resultado and resultado[0].islower():
+        resultado = resultado[0].upper() + resultado[1:]
+
+    return resultado
+
+
 def _limpiar_valor(val):
     """Convierte un valor de celda a float, manejando anotaciones como '(1) 4,5'."""
     if val is None:
@@ -392,7 +510,9 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
 
     # ── Nombre completo del alimento ──────────────────────────────────────────
     df['NOMBRE_COMPLETO'] = df.apply(
-        lambda r: f"{r['ALIMENTO']} ({r['ESTADO']})" if r['ESTADO'] else r['ALIMENTO'],
+        lambda r: traducir_nombre_ar(
+            f"{r['ALIMENTO']} ({r['ESTADO']})" if r['ESTADO'] else r['ALIMENTO']
+        ),
         axis=1
     )
 
