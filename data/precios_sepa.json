@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-05-24T11:59:51",
+  "actualizado": "2026-05-24T13:09:21",
   "fuente": "SEPA datos.produccion.gob.ar",
   "archivo_sepa": "domingo",
   "precios": {
@@ -19,19 +19,19 @@
       "Pescados": 792.6
     },
     "AR-B": {
-      "Aceites": 386.6,
-      "Aves": 1721.8,
-      "Azucares": 627.62,
-      "Carnes": 1550.0,
-      "Cereales": 738.0,
-      "Embutidos": 2142.86,
-      "Frutas": 487.34,
-      "FrutosSecos": 3698.57,
-      "Hortalizas": 523.25,
-      "Huevos": NaN,
-      "Lacteos": 1405.26,
-      "Leguminosas": 768.86,
-      "Pescados": 798.0
+      "Aceites": 461.11,
+      "Aves": 1176.47,
+      "Azucares": 559.71,
+      "Carnes": 1426.0,
+      "Cereales": 370.0,
+      "Embutidos": 1444.44,
+      "Frutas": 315.4,
+      "FrutosSecos": 1649.1,
+      "Hortalizas": 439.9,
+      "Huevos": 46.5,
+      "Lacteos": 1000.5,
+      "Leguminosas": 469.33,
+      "Pescados": 792.6
     },
     "AR-C": {
       "Aceites": 461.11,
