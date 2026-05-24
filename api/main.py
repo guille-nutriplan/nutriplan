@@ -21,7 +21,7 @@ from typing import Optional
 import traceback
 
 from data.tabla_loader import cargar_tabla
-from data.sepa_client import obtener_precios_sepa, aplicar_precios, _precios_referencia, PROVINCIAS
+from data.sepa_client import obtener_precios_sepa, aplicar_precios, _precios_referencia, PROVINCIAS, sepa_cache
 from data.who_requirements import WHO_REQUIREMENTS, WHO_GROUPS_UI
 from engine.optimizer import optimizar_dieta, FiltrosDieta
 
