@@ -326,6 +326,30 @@ def optimizar_dieta(
         A_ub_rows.append(-col_g('SELENIO_g'))
         b_ub_rows.append(-selenio_min)
 
+    # ── Límites superiores de seguridad (UL — OMS/IOM) ───────────────────────
+    # Solo para nutrientes liposolubles o con riesgo de toxicidad.
+    # Vitaminas hidrosolubles (C, B1, B2) no tienen UL restrictivo — sin techo.
+    VIT_A_MAX  = req.get('vit_a_max_ui', 10_000)   # UL adultos: 10.000 UI
+    HIERRO_MAX = req.get('hierro_max',   45.0)      # UL: 45 mg
+    SELENIO_MAX= req.get('selenio_max',  300.0)     # UL: 400 µg; usamos 300 conservador
+    ZINC_MAX   = req.get('zinc_max',     40.0)      # UL: 40 mg
+
+    if 'VIT_A_g' in df.columns:
+        A_ub_rows.append(col_g('VIT_A_g'))
+        b_ub_rows.append(VIT_A_MAX)
+
+    if 'FE_g' in df.columns:
+        A_ub_rows.append(col_g('FE_g'))
+        b_ub_rows.append(HIERRO_MAX)
+
+    if 'SELENIO_g' in df.columns:
+        A_ub_rows.append(col_g('SELENIO_g'))
+        b_ub_rows.append(SELENIO_MAX)
+
+    if 'ZINC_g' in df.columns:
+        A_ub_rows.append(col_g('ZINC_g'))
+        b_ub_rows.append(ZINC_MAX)
+
     # ── FIX: Peso total diario (saciedad) ─────────────────────────────────────
     rango_key = req.get('_rango_key', '')
     factor_peso = FACTOR_PESO_ETARIO.get(rango_key, 1.0)
