@@ -858,14 +858,18 @@ def completar_dieta(body: CompletarRequest):
     def restante(actual, minimo):
         return max(0.0, minimo - actual)
 
+    # Para los máximos usamos el original — NO restamos lo ya consumido.
+    # Si restáramos, un nutriente ya cubierto al 100% daría max=0,
+    # lo que haría al LP infactible (no puede agregar nada sin violar el techo).
     req_restante = {
+        # Mínimos: solo lo que falta cubrir
         'energia_min':   restante(aportes_acc['energia_kcal'], req['energia_min']),
-        'energia_max':   max(0, req['energia_max'] - aportes_acc['energia_kcal']),
+        'energia_max':   req['energia_max'],   # máximo original
         'proteinas_min': restante(aportes_acc['proteinas_g'],  req['proteinas_min']),
         'grasas_min':    restante(aportes_acc['grasas_g'],     req['grasas_min']),
-        'grasas_max':    max(0, req['grasas_max'] - aportes_acc['grasas_g']),
+        'grasas_max':    req['grasas_max'],
         'hc_min':        restante(aportes_acc['hc_g'],         req['hc_min']),
-        'hc_max':        max(0, req.get('hc_max', req['hc_min']*4) - aportes_acc['hc_g']),
+        'hc_max':        req.get('hc_max', req['hc_min'] * 4),
         'calc_min':      restante(aportes_acc['calcio_mg'],    req['calc_min']),
         'hierro_min':    restante(aportes_acc['hierro_mg'],    req['hierro_min']),
         'vit_a_min_ui':  restante(aportes_acc['vit_a_ui'],     req['vit_a_min_ui']),
@@ -876,9 +880,14 @@ def completar_dieta(body: CompletarRequest):
         'zinc_min':      restante(aportes_acc['zinc_mg'],      req.get('zinc_min', 8)),
         'yodo_min':      restante(aportes_acc['yodo_ug'],      req.get('yodo_min', 150)),
         'selenio_min':   restante(aportes_acc['selenio_ug'],   req.get('selenio_min', 55)),
+        # UL heredados del rango original
+        'vit_a_max_ui':  req.get('vit_a_max_ui', 10000),
+        'hierro_max':    req.get('hierro_max', 45),
+        'selenio_max':   req.get('selenio_max', 300),
+        'zinc_max':      req.get('zinc_max', 40),
     }
-    # Propagar campos que el optimizador necesita
-    for k in ['label','edad_min','edad_max','sexo']:
+    # Propagar metadatos que el optimizador necesita
+    for k in ['label', 'edad_min', 'edad_max', 'sexo']:
         if k in req:
             req_restante[k] = req[k]
 
@@ -902,11 +911,14 @@ def completar_dieta(body: CompletarRequest):
 
     if res_lp.exito:
         for _, row in res_lp.alimentos.iterrows():
+            gramos = float(row['GRAMOS'])
+            precio_g = float(row.get('PRECIO_g', 0) or 0)
+            costo = round(precio_g * gramos, 1)
             agregar_lista.append({
                 'nombre':   row.get('NOMBRE_COMPLETO', row.get('ALIMENTO','')),
                 'grupo':    row.get('GRUPO',''),
-                'gramos':   round(float(row['GRAMOS']),1),
-                'costo_ars':round(float(row.get('COSTO_ARS',0)),1),
+                'gramos':   round(gramos, 1),
+                'costo_ars': costo,
             })
         a = res_lp.aportes
         ap2 = {k: a.get(k,0) for k in ap2}
