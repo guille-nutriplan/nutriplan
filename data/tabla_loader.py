@@ -179,6 +179,28 @@ LIMITES_INDIVIDUALES = {
     'miel':       20,    # 1 cucharada
     'alcaparra':   5,
     'aceituna':   30,    # 5-6 aceitunas
+    # ── Dulces y golosinas — límite estricto ─────────────────────────────────
+    # El LP los elige como fuente barata de HC — limitamos fuertemente
+    'caramelo':   10,    # 2-3 caramelos
+    'chocolate':  20,    # 2 cuadraditos
+    'confitura':  10,    # 1 cucharadita
+    'jalea':      10,
+    'jaleas':     10,
+    'galletita':  30,    # 3-4 galletitas
+    'alfajor':    30,
+    'facturas':   30,
+    'helado':     80,    # 1 bocha pequeña
+    'mermelada':  15,    # 1 cucharada
+    'dulce de leche': 15,
+    'azucar de uva':  10,
+    'malta':      10,
+    'melaza':     10,
+    # ── Otros procesados con azúcar o grasa ──────────────────────────────────
+    'galletita':  40,
+    'galletas':   60,    # máx ~6 galletas tipo crackers
+    'condensada': 30,    # leche condensada: máx 2 cucharadas
+    'lacteado':   20,    # bebidas lacteadas azucaradas
+    'cereales az': 40,   # cereales azucarados de desayuno
 }
 
 # ─── FIX 3: Penalización de formas concentradas/secas ─────────────────────────
