@@ -888,7 +888,7 @@ def completar_dieta(body: CompletarRequest):
     df_lp = df_base[~df_base['ALIMENTO'].str.lower().isin(nombres_tiene)].copy()
 
     filtros = body.filtros or FiltrosDieta()
-    from engine.optimizer import optimizar_dieta, aplicar_filtros
+    from engine.optimizer import optimizar_dieta, _aplicar_filtros as aplicar_filtros
     df_lp = aplicar_filtros(df_lp, filtros)
 
     res_lp = optimizar_dieta(df_lp, req_restante)
