@@ -910,10 +910,18 @@ def completar_dieta(body: CompletarRequest):
            'yodo_ug':0,'selenio_ug':0,'gramos_total':0}
 
     if res_lp.exito:
-        for _, row in res_lp.alimentos.iterrows():
+        df_agregar = res_lp.alimentos.copy()
+        # Calcular costo explícitamente desde PRECIO_g * GRAMOS
+        if 'PRECIO_g' in df_agregar.columns:
+            df_agregar['_COSTO'] = df_agregar['PRECIO_g'].fillna(0) * df_agregar['GRAMOS']
+        else:
+            df_agregar['_COSTO'] = 0.0
+        print(f"[COMPLETAR] Cols disponibles: {list(df_agregar.columns[:8])}")
+        print(f"[COMPLETAR] PRECIO_g sample: {df_agregar['PRECIO_g'].head(3).tolist() if 'PRECIO_g' in df_agregar.columns else 'N/A'}")
+
+        for _, row in df_agregar.iterrows():
             gramos = float(row['GRAMOS'])
-            precio_g = float(row.get('PRECIO_g', 0) or 0)
-            costo = round(precio_g * gramos, 1)
+            costo  = round(float(row.get('_COSTO', 0) or 0), 1)
             agregar_lista.append({
                 'nombre':   row.get('NOMBRE_COMPLETO', row.get('ALIMENTO','')),
                 'grupo':    row.get('GRUPO',''),
