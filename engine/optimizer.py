@@ -420,8 +420,8 @@ def optimizar_dieta(
         ('FE_g',     req['hierro_min']/100,     UL['FE_g'],                   1.2,   2.0),
         ('VIT_A_g',  req['vit_a_min_ui']/100,  UL['VIT_A_g'],                1.1,   4.0),  # Vit A: target 110%, peso alto
         ('VIT_C_g',  req['vit_c_min']/100,     None,                         1.5,   1.0),  # C: inofensivo, peso bajo
-        ('VIT_B1_g', req['vit_b1_min']/100,    None,                         1.5,   1.0),
-        ('VIT_B2_g', req['vit_b2_min']/100,    None,                         1.5,   1.0),
+        ('VIT_B1_g', req['vit_b1_min']/100,    None,                         1.05,  3.0),  # B1: peso aumentado
+        ('VIT_B2_g', req['vit_b2_min']/100,    None,                         1.05,  4.0),  # B2: peso alto, objetivo justo al mínimo
         ('FIBRA_g',  req.get('fibra_min',25)/100, None,                      1.5,   1.0),
         ('ZINC_g',   req.get('zinc_min',8)/100,   UL['ZINC_g'],              1.3,   1.5),
         ('SELENIO_g',req.get('selenio_min',55)/100, UL['SELENIO_g'],         1.3,   1.5),
