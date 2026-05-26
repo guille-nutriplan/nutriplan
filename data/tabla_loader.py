@@ -499,6 +499,15 @@ ALIMENTOS_EXCLUIR = {
     'butifarra', 'salchicha de vaca',
     # Oveja
     'carne de oveja',
+    # Cereales específicos a excluir
+    'galletas',
+    'semola', 'sémola',
+    'manitoba',
+    'pan de viena', 'pan viena',
+    'polvo para flanes',
+    'tarta manzana',
+    'sagú', 'sagu',
+    'tapioca',
     # Todo el grupo caza/cordero/ternera
     'cordero', 'ternera',
 }
@@ -722,6 +731,25 @@ def _agregar_alimentos_argentinos(df: pd.DataFrame) -> pd.DataFrame:
             'CAL': 884, 'PR': 0,    'GR': 100.0, 'HC': 0,
             'CA': 0,    'FE': 0.0,  'VIT_A': 0,   'VIT_C': 0,
             'VIT_B1': 0, 'VIT_B2': 0, 'FIBRA': 0,
+        },
+        # ── Hortalizas argentinas adicionales ────────────────────────────────
+        {
+            'ALIMENTO': 'Palmitos', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 36,  'PR': 2.7,  'GR': 0.4,  'HC': 7.3,
+            'CA': 58,   'FE': 1.70, 'VIT_A': 0,   'VIT_C': 7.6,
+            'VIT_B1': 0.027, 'VIT_B2': 0.057, 'FIBRA': 2.0,
+        },
+        {
+            'ALIMENTO': 'Zapallo cabutia', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 34,  'PR': 1.0,  'GR': 0.1,  'HC': 8.6,
+            'CA': 21,   'FE': 0.50, 'VIT_A': 5220, 'VIT_C': 9.0,
+            'VIT_B1': 0.050, 'VIT_B2': 0.020, 'FIBRA': 1.5,
+        },
+        {
+            'ALIMENTO': 'Zapallo anquito', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 45,  'PR': 1.4,  'GR': 0.2,  'HC': 11.2,
+            'CA': 33,   'FE': 0.70, 'VIT_A': 4226, 'VIT_C': 15.0,
+            'VIT_B1': 0.075, 'VIT_B2': 0.037, 'FIBRA': 1.8,
         },
     ]
 
