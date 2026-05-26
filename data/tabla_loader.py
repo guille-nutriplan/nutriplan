@@ -428,15 +428,16 @@ DICT_ES_AR = {
 
 def traducir_nombre_ar(nombre: str) -> str:
     """
-    Traduce nombres de alimentos de español de España a español rioplatense.
-    Aplica reemplazos del diccionario DICT_ES_AR, de mayor a menor longitud.
+    Traduce nombres de alimentos de español España a español argentino.
+    Aplica reemplazos del diccionario DICT_ES_AR usando límites de palabra
+    para evitar reemplazos en substrings (ej: 'col' dentro de 'chocolate').
     """
+    import re
     resultado = nombre
     for es, ar in sorted(DICT_ES_AR.items(), key=lambda x: len(x[0]), reverse=True):
-        low = resultado.lower()
-        idx = low.find(es.lower())
-        if idx != -1:
-            resultado = resultado[:idx] + ar + resultado[idx + len(es):]
+        # Usar regex con límites de palabra (\b) para evitar reemplazos parciales
+        patron = r'(?<![a-záéíóúüñA-ZÁÉÍÓÚÜÑ])' + re.escape(es) + r'(?![a-záéíóúüñA-ZÁÉÍÓÚÜÑ])'
+        resultado = re.sub(patron, ar, resultado, flags=re.IGNORECASE)
     if nombre and nombre[0].isupper() and resultado and resultado[0].islower():
         resultado = resultado[0].upper() + resultado[1:]
     return resultado
@@ -696,6 +697,31 @@ def _agregar_alimentos_argentinos(df: pd.DataFrame) -> pd.DataFrame:
             'CAL': 61,  'PR': 1.5,  'GR': 0.3,  'HC': 14.2,
             'CA': 59,   'FE': 2.10, 'VIT_A': 1667, 'VIT_C': 12.0,
             'VIT_B1': 0.060, 'VIT_B2': 0.030, 'FIBRA': 1.8,
+        },
+        # ── Aceites comunes en Argentina ──────────────────────────────────────
+        {
+            'ALIMENTO': 'Aceite de oliva', 'ESTADO': '', 'GRUPO': 'Aceites',
+            'CAL': 884, 'PR': 0,    'GR': 100.0, 'HC': 0,
+            'CA': 1,    'FE': 0.56, 'VIT_A': 0,   'VIT_C': 0,
+            'VIT_B1': 0, 'VIT_B2': 0, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Aceite de girasol', 'ESTADO': '', 'GRUPO': 'Aceites',
+            'CAL': 884, 'PR': 0,    'GR': 100.0, 'HC': 0,
+            'CA': 0,    'FE': 0.0,  'VIT_A': 0,   'VIT_C': 0,
+            'VIT_B1': 0, 'VIT_B2': 0, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Aceite de maíz', 'ESTADO': '', 'GRUPO': 'Aceites',
+            'CAL': 884, 'PR': 0,    'GR': 100.0, 'HC': 0,
+            'CA': 0,    'FE': 0.0,  'VIT_A': 0,   'VIT_C': 0,
+            'VIT_B1': 0, 'VIT_B2': 0, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Aceite de soja', 'ESTADO': '', 'GRUPO': 'Aceites',
+            'CAL': 884, 'PR': 0,    'GR': 100.0, 'HC': 0,
+            'CA': 0,    'FE': 0.0,  'VIT_A': 0,   'VIT_C': 0,
+            'VIT_B1': 0, 'VIT_B2': 0, 'FIBRA': 0,
         },
     ]
 
