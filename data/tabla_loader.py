@@ -403,6 +403,56 @@ GRUPOS_OMITIR_ESTADO_CRUDO = {
 ESTADOS_OMITIR = {'crudo', 'cruda', 'crudos', 'crudas', 'fresco', 'fresca', 'frescos', 'frescas'}
 
 
+
+# ─── Alimentos a excluir por no disponibles en Argentina ─────────────────────
+ALIMENTOS_EXCLUIR = {
+    # Carnes exóticas
+    'ballena', 'caballo', 'cabra', 'cabrito', 'carnero',
+    # Caza
+    'ciervo', 'cobaya', 'conejo', 'corzo', 'jabali', 'jabalí', 'liebre',
+    # Aves poco comunes
+    'capon', 'capón', 'codoriz', 'codorniz', 'faisan', 'faisán',
+    'ganso', 'paloma', 'perdiz', 'pintada',
+    'gallina joven', 'gallina vieja',
+    # Vísceras y cortes especiales
+    'corazon', 'lechecillas', 'higado', 'riñon', 'sesos',
+    'tripas', 'sangre', 'lengua',
+    # Huevos exóticos
+    'huevo de pata', 'huevo de pava', 'huevo seco', 'huevo tortilla',
+    # Lácteos no disponibles
+    'leche de burra', 'leche de cabra', 'leche de mujer', 'leche de oveja',
+    'leche deoveja',
+    # Quesos específicos españoles
+    'queso brugos', 'queso cabrales', 'queso gervaia', 'queso gorgonzola',
+    'queso manchego', 'queso villalon', 'requeson miraflores',
+    # Pescados/mariscos exóticos
+    'centollo', 'chirla', 'lamprea', 'bogavante', 'breca', 'faneca',
+    'gallo', 'barbo', 'carpa', 'congrio', 'hipogloso', 'halibut',
+    'caviar', 'cangrejo',
+    # Cereales/almidones no comunes
+    'sagu', 'sagú', 'tapioca', 'polvo para flanes', 'tarta manzana',
+    'pan de viena', 'pan diabeticos',
+    # Azúcares/dulces
+    'azucar de uva', 'caldo en cubitos', 'malta', 'melaza',
+    # Aceites especiales
+    'aceite higado bacalao', 'aceite comestible',
+    # Embutidos específicos
+    'butifarra', 'salchicha de vaca',
+    # Oveja
+    'carne de oveja',
+    # Todo el grupo caza/cordero/ternera
+    'cordero', 'ternera',
+}
+
+def _esta_excluido_nombre(nombre: str) -> bool:
+    """Verifica si un alimento está en la lista de exclusión."""
+    n = nombre.lower().strip()
+    for excluido in ALIMENTOS_EXCLUIR:
+        if excluido in n:
+            return True
+    return False
+
+
 def _limpiar_valor(val):
     """Convierte un valor de celda a float, manejando anotaciones como '(1) 4,5'."""
     if val is None:
@@ -547,8 +597,11 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     df['VIT_C']  = df['VIT_C']  / 1000    # mcg → mg
 
     # ── FIX 2: columna DISPONIBLE ─────────────────────────────────────────────
+    # Aplicar exclusión por nombre
+    df['_EXCLUIR_NOMBRE'] = df['ALIMENTO'].apply(_esta_excluido_nombre)
+
     df['DISPONIBLE'] = df.apply(
-        lambda r: not _es_excluido(r['ALIMENTO'], r['ESTADO'], r['GRUPO']),
+        lambda r: not r['_EXCLUIR_NOMBRE'] and not _es_excluido(r['ALIMENTO'], r['ESTADO'], r['GRUPO']),
         axis=1
     )
 
