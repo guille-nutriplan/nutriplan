@@ -218,7 +218,7 @@ def calcular_plan(body: PlanRequest):
     nombre_provincia = PROVINCIAS.get(body.provincia_codigo, "Nacional") if body.provincia_codigo else "Nacional"
 
     # Aplicar precios al DataFrame
-    df = aplicar_precios(DF_BASE.copy(), df_precios)
+    df = aplicar_precios(DF_BASE.copy(), df_precios, sepa_cache.get_precios_especificos())
 
     # Construir filtros
     filtros = FiltrosDieta(

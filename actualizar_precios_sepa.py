@@ -55,13 +55,14 @@ def procesar_todas_las_provincias(df_raw):
     return resultado
 
 
-def guardar_json(precios: dict, url_dia: str) -> dict:
+def guardar_json(precios: dict, url_dia: str, precios_especificos: dict = None) -> dict:
     """Guarda los precios en data/precios_sepa.json."""
     datos = {
-        'actualizado':  datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
-        'fuente':       'SEPA datos.produccion.gob.ar',
-        'archivo_sepa': url_dia,
-        'precios':      precios,
+        'actualizado':      datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        'fuente':           'SEPA datos.produccion.gob.ar',
+        'archivo_sepa':     url_dia,
+        'precios':          precios,
+        'precios_especificos': precios_especificos,
     }
     OUTPUT_JSON.parent.mkdir(exist_ok=True)
     OUTPUT_JSON.write_text(
@@ -139,7 +140,7 @@ def main():
     del df_raw
 
     # Guardar JSON
-    datos = guardar_json(precios, nombre_dia_ok)
+    datos = guardar_json(precios, nombre_dia_ok, precios_especificos)
 
     # Resumen
     print("\n─── Precios nacionales ($/100g) ─────────────────────")

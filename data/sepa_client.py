@@ -397,15 +397,44 @@ def _precios_referencia() -> pd.DataFrame:
 
 
 def aplicar_precios(df_alimentos: pd.DataFrame,
-                    df_precios: pd.DataFrame) -> pd.DataFrame:
-    """Une precios SEPA con el DataFrame de alimentos por grupo."""
+                    df_precios: pd.DataFrame,
+                    precios_especificos: dict = None) -> pd.DataFrame:
+    """
+    Une precios SEPA con el DataFrame de alimentos.
+    Primero aplica precio por grupo (mediana SEPA), luego sobreescribe
+    con precios específicos por producto cuando están disponibles.
+    """
     precio_map = df_precios.set_index('GRUPO')['PRECIO_MEDIANA_100G'].to_dict()
     df = df_alimentos.copy()
     df['PRECIO_100G'] = df['GRUPO'].map(precio_map)
     df['PRECIO_g']    = df['PRECIO_100G'] / 100.0
+
+    # Aplicar precios específicos por alimento
+    if precios_especificos:
+        n_especificos = 0
+        for _, row in df.iterrows():
+            alimento = str(row.get('ALIMENTO', ''))
+            # Buscar en el mapping alimento → keyword
+            keyword = ALIMENTO_A_KEYWORD.get(alimento)
+            if not keyword:
+                # Intentar match parcial por nombre
+                alimento_l = alimento.lower()
+                for al_key, kw in ALIMENTO_A_KEYWORD.items():
+                    if al_key.lower() in alimento_l or alimento_l in al_key.lower():
+                        keyword = kw
+                        break
+            if keyword and keyword in precios_especificos:
+                precio_esp = precios_especificos[keyword]
+                df.loc[df['ALIMENTO'] == alimento, 'PRECIO_g'] = precio_esp / 100.0
+                df.loc[df['ALIMENTO'] == alimento, 'PRECIO_100G'] = precio_esp
+                n_especificos += 1
+
+        if n_especificos:
+            print(f"  ✓ Precios específicos aplicados: {n_especificos} alimentos")
+
     sin_precio = df['PRECIO_100G'].isna().sum()
     if sin_precio:
-        print(f"⚠ {sin_precio} alimentos sin precio asignado")
+        df['PRECIO_g'] = df['PRECIO_g'].fillna(0)
     return df
 
 
@@ -435,6 +464,7 @@ class _SepaCacheManager:
         self._lock    = threading.Lock()
         self._df      = None
         self._precios_por_provincia = {}
+        self._precios_especificos   = {}
         self._status  = 'pendiente'
         self._mensaje = 'Precios SEPA: cargando...'
         self._actualizado = None
@@ -455,6 +485,11 @@ class _SepaCacheManager:
     def listo(self):
         with self._lock:
             return self._status == 'listo' and self._df is not None
+
+    def get_precios_especificos(self) -> dict:
+        """Devuelve precios específicos por keyword si están disponibles."""""
+        with self._lock:
+            return self._precios_especificos.copy() if self._precios_especificos else {}
 
     def fuente(self) -> str:
         with self._lock:
@@ -492,7 +527,8 @@ class _SepaCacheManager:
         df = pd.DataFrame(rows)
 
         actualizado = datos.get('actualizado', 'desconocido')
-        return df, actualizado, datos.get('precios', {})
+        precios_esp = datos.get('precios_especificos', {})
+        return df, actualizado, datos.get('precios', {}), precios_esp
 
     def get_precios(self, provincia_codigo: str | None = None) -> pd.DataFrame:
         """
@@ -524,14 +560,16 @@ class _SepaCacheManager:
 
         try:
             print(f"[SEPA] Cargando precios desde JSON (intento {self._intentos})")
-            df_precios, actualizado, todos_precios = self._cargar_desde_json()
+            df_precios, actualizado, todos_precios, precios_esp = self._cargar_desde_json()
 
             with self._lock:
                 self._df                   = df_precios
                 self._precios_por_provincia = todos_precios
+                self._precios_especificos   = precios_esp
                 self._status               = 'listo'
                 self._actualizado          = actualizado
-                self._mensaje              = f'Precios SEPA: {actualizado[:10]}'
+                n_esp = len(precios_esp)
+                self._mensaje              = f'Precios SEPA: {actualizado[:10]} ({n_esp} productos específicos)'
 
             print(f"[SEPA] ✓ Precios cargados del {actualizado[:10]}")
 
@@ -559,6 +597,224 @@ class _SepaCacheManager:
 
     def programar_refresco(self, intervalo_horas: int = 24):
         """No necesario con JSON en repo — el refresco ocurre al hacer deploy."""
+
+
+
+# ─── Keywords para extraer precios específicos de SEPA ────────────────────────
+# Mapeamos conceptos nutricionales a términos que aparecen en productos SEPA
+# Orden: más específico primero (se usa el primero que matchea)
+KEYWORDS_PRECIO_ESPECIFICO = {
+    # ── Cereales ──────────────────────────────────────────────────────────────
+    'arroz integral':    ['arroz integral'],
+    'arroz yamani':      ['arroz yamani', 'arroz yamaní'],
+    'arroz':             ['arroz largo', 'arroz blanco', 'arroz parboil', 'arroz'],
+    'fideos':            ['fideos spaghetti', 'fideos tallarín', 'fideos moño',
+                          'fideos codo', 'fideos', 'pasta seca'],
+    'polenta':           ['polenta'],
+    'avena':             ['avena arrollada', 'avena'],
+    'harina':            ['harina 0000', 'harina 000', 'harina de trigo'],
+    'pan lactal':        ['pan lactal', 'pan de molde', 'pan americano'],
+    'pan':               ['pan de mesa', 'pan blanco', 'pan francés'],
+    'galletitas':        ['galletitas', 'galletas'],
+    # ── Carnes vacunas ────────────────────────────────────────────────────────
+    'carne picada':      ['carne picada', 'picada común', 'picada especial'],
+    'asado de costilla': ['asado de tira', 'tira de asado', 'asado tira'],
+    'nalga':             ['nalga'],
+    'bola de lomo':      ['bola de lomo'],
+    'paleta':            ['paleta vacuna', 'paleta'],
+    'matambre':          ['matambre'],
+    'osobuco':           ['osobuco', 'osso buco'],
+    'cuadrada':          ['cuadrada'],
+    # ── Aves ──────────────────────────────────────────────────────────────────
+    'pechuga de pollo':  ['pechuga de pollo', 'pechuga pollo'],
+    'muslo de pollo':    ['muslo pollo', 'pata muslo', 'cuarto trasero'],
+    'pollo':             ['pollo entero', 'pollo trozado', 'pollo'],
+    # ── Pescados ──────────────────────────────────────────────────────────────
+    'atun':              ['atún en aceite', 'atún al natural', 'atun'],
+    'merluza':           ['merluza', 'filet de merluza'],
+    'sardinas':          ['sardinas'],
+    # ── Lácteos ───────────────────────────────────────────────────────────────
+    'leche':             ['leche entera', 'leche sachet', 'leche parcialmente descremada'],
+    'leche descremada':  ['leche descremada'],
+    'yogur':             ['yogur entero', 'yogur bebible', 'yogurt'],
+    'queso':             ['queso cremoso', 'queso tybo', 'queso cuartirolo',
+                          'queso pategrás', 'queso barra'],
+    'manteca':           ['manteca'],
+    'crema de leche':    ['crema de leche'],
+    'ricota':            ['ricota'],
+    # ── Huevos ────────────────────────────────────────────────────────────────
+    'huevos':            ['huevos blancos', 'huevos colorados', 'huevo'],
+    # ── Aceites ───────────────────────────────────────────────────────────────
+    'aceite de oliva':   ['aceite de oliva', 'aceite oliva'],
+    'aceite de girasol': ['aceite de girasol', 'aceite girasol'],
+    'aceite de maiz':    ['aceite de maíz', 'aceite maiz', 'aceite de maiz'],
+    'aceite de soja':    ['aceite de soja', 'aceite soja'],
+    # ── Frutas ────────────────────────────────────────────────────────────────
+    'banana':            ['banana'],
+    'manzana':           ['manzana'],
+    'naranja':           ['naranja'],
+    'mandarina':         ['mandarina'],
+    'pera':              ['pera'],
+    'durazno':           ['durazno'],
+    'uva':               ['uva'],
+    'limon':             ['limón', 'limon'],
+    'palta':             ['palta', 'aguacate'],
+    # ── Verduras ──────────────────────────────────────────────────────────────
+    'papa':              ['papa', 'papas'],
+    'tomate':            ['tomate'],
+    'cebolla':           ['cebolla'],
+    'zanahoria':         ['zanahoria'],
+    'lechuga':           ['lechuga'],
+    'zapallo':           ['zapallo'],
+    'calabaza':          ['calabaza', 'zapallo'],
+    'morron':            ['morrón', 'morron', 'pimiento'],
+    # ── Legumbres ─────────────────────────────────────────────────────────────
+    'lentejas':          ['lentejas'],
+    'garbanzos':         ['garbanzo', 'garbanzos'],
+    'porotos':           ['porotos', 'poroto'],
+    'arvejas':           ['arvejas', 'arveja'],
+    # ── Azúcares ──────────────────────────────────────────────────────────────
+    'azucar':            ['azúcar blanca', 'azucar refinada', 'azúcar'],
+    'miel':              ['miel de abeja', 'miel'],
+    # ── Frutos secos ──────────────────────────────────────────────────────────
+    'mani':              ['maní', 'mani tostado', 'mani'],
+    'almendras':         ['almendras'],
+    'nueces':            ['nueces'],
+}
+
+# Mapping de nombre de alimento → keyword SEPA
+# Permite asignar un precio específico a cada alimento de la tabla
+ALIMENTO_A_KEYWORD = {
+    # Cereales
+    'Arroz':                'arroz',
+    'Arroz integral':       'arroz integral',
+    'Arroz yamaní':         'arroz yamani',
+    'Fideos':               'fideos',
+    'Macarrones':           'fideos',
+    'Polenta':              'polenta',
+    'Avena':                'avena',
+    'Harina de trigo':      'harina',
+    'Pan':                  'pan',
+    # Carnes vacunas
+    'Carne picada':         'carne picada',
+    'Asado de costilla':    'asado de costilla',
+    'Nalga':                'nalga',
+    'Bola de lomo':         'bola de lomo',
+    'Paleta':               'paleta',
+    'Matambre':             'matambre',
+    'Osobuco':              'osobuco',
+    'Cuadrada':             'cuadrada',
+    'Bistec':               'carne picada',
+    'Carne':                'carne picada',
+    # Aves
+    'Pollo':                'pollo',
+    'Pechuga de pollo':     'pechuga de pollo',
+    'Muslo de pollo':       'muslo de pollo',
+    # Pescados
+    'Atun':                 'atun',
+    'Abadejo':              'merluza',
+    'Merluza':              'merluza',
+    'Salmon':               'merluza',
+    # Lácteos
+    'Leche de vaca':        'leche',
+    'Leche':                'leche',
+    'Yogur':                'yogur',
+    'Queso':                'queso',
+    'Manteca':              'manteca',
+    'Crema':                'crema de leche',
+    'Ricota':               'ricota',
+    # Huevos
+    'Huevo':                'huevos',
+    # Aceites
+    'Aceite de oliva':      'aceite de oliva',
+    'Aceite de girasol':    'aceite de girasol',
+    'Aceite de maíz':       'aceite de maiz',
+    'Aceite de soja':       'aceite de soja',
+    'Mayonesa':             'aceite de girasol',
+    # Frutas
+    'Platano':              'banana',
+    'Pera':                 'pera',
+    'Manzana':              'manzana',
+    'Naranja':              'naranja',
+    'Mandarina':            'mandarina',
+    'Durazno':              'durazno',
+    'Palta':                'palta',
+    # Verduras
+    'Patata':               'papa',
+    'Tomate':               'tomate',
+    'Cebolla':              'cebolla',
+    'Zanahoria':            'zanahoria',
+    'Lechuga':              'lechuga',
+    'Zapallo':              'zapallo',
+    'Zapallo cabutia':      'zapallo',
+    'Zapallo anquito':      'zapallo',
+    'Morron':               'morron',
+    'Morrón rojo':          'morron',
+    'Morrón verde':         'morron',
+    # Legumbres
+    'Lentejas':             'lentejas',
+    'Garbanzos':            'garbanzos',
+    'Judias blancas':       'porotos',
+    'Judias rojas':         'porotos',
+    'Arvejas':              'arvejas',
+    # Azúcares
+    'Azucar':               'azucar',
+    'Miel de Abeja':        'miel',
+    # Frutos secos
+    'Mani':                 'mani',
+    'Almendra':             'almendras',
+    'Nuez':                 'nueces',
+}
+
+
+def _extraer_precios_especificos(df_raw: pd.DataFrame) -> dict:
+    """
+    Extrae precios medianos por producto específico desde el DataFrame crudo de SEPA.
+    Busca en `producto_descripcion` con los keywords definidos.
+    Retorna dict: {keyword: precio_por_100g}
+    """
+    resultados = {}
+    desc_col = 'producto_descripcion'
+    if desc_col not in df_raw.columns:
+        return resultados
+
+    df = df_raw.copy()
+    df['precio_100g_num'] = pd.to_numeric(df.get('precio_ref'), errors='coerce')
+
+    # Normalizar unidad a /100g
+    def _normalizar(row):
+        p = row.get('precio_100g_num')
+        u = str(row.get('unidad_ref', '')).lower().strip()
+        c = float(row.get('cantidad_ref', 1) or 1)
+        if pd.isna(p) or p <= 0:
+            return None
+        precio_por_unidad = p / c
+        if u == 'kg':  return precio_por_unidad / 10
+        if u in ('g','gr'): return precio_por_unidad * 100
+        if u == 'l':   return precio_por_unidad / 10
+        if u == 'ml':  return precio_por_unidad * 100
+        return precio_por_unidad / 10  # default kg
+
+    df['precio_100g_norm'] = df.apply(_normalizar, axis=1)
+    df = df.dropna(subset=['precio_100g_norm'])
+    df = df[df['precio_100g_norm'] > 0]
+    df = df[df['precio_100g_norm'] < 5000]  # eliminar outliers
+
+    desc_lower = df[desc_col].fillna('').str.lower()
+
+    for keyword, terminos in KEYWORDS_PRECIO_ESPECIFICO.items():
+        mask = pd.Series(False, index=df.index)
+        for termino in terminos:
+            mask |= desc_lower.str.contains(termino.lower(), na=False)
+
+        matches = df[mask]['precio_100g_norm']
+        if len(matches) >= 5:  # mínimo 5 productos para que sea representativo
+            precio = round(float(matches.median()), 2)
+            resultados[keyword] = precio
+            print(f"    {keyword:<25} ${precio:>8.2f}/100g  ({len(matches)} productos)")
+
+    return resultados
+
 
 
 # Instancia global — se importa desde main.py
