@@ -318,6 +318,64 @@ DICT_ES_AR = {
     'pan de debada':    'pan de cebada',
     'magdalena':        'muffin',
     'magdalenas':       'muffins',
+    # Frutas con nombre diferente en Argentina
+    'platano':          'banana',
+    'plátano':          'banana',
+    'platanos':         'bananas',
+    'plátanos':         'bananas',
+    'toronja':          'pomelo',   # toronja = grapefruit = pomelo en Argentina
+    'chirimoya':        'chirimoya',
+    'papaya':           'papaya',
+    'mango':            'mango',
+    'pera':             'pera',
+    'manzana':          'manzana',
+    # Verduras con nombre diferente en Argentina
+    'calabaza':         'zapallo',
+    'ruibarbo':         'ruibardo',
+    'acelgas':          'acelga',
+    'espinacas':        'espinaca',
+    'esparragos':       'espárragos',
+    'esparrago':        'espárrago',
+    'cebollino':        'ciboulette',
+    'champiñon':        'champiñón',
+    'champinon':        'champiñón',
+    'puerro':           'puerro',
+    'apio':             'apio',
+    # Cereales y derivados
+    'macarrones':       'fideos',
+    'fideos':           'fideos',
+    'semola':           'sémola',
+    'sémola':           'sémola',
+    'pan de molde':     'pan lactal',
+    # Aceites
+    'aceite de oliva':  'aceite de oliva',
+    'aceite de maiz':   'aceite de maíz',
+    'aceite de girasol':'aceite de girasol',
+    # Lácteos
+    'requesón':         'ricota',
+    'requeson':         'ricota',
+    'nata agria':       'crema agria',
+    # Carnes y pescados
+    'atun':             'atún',
+    'bonito':           'bonito/atún',
+    'boqueron':         'anchoa/boquerón',
+    'anchoas':          'anchoas',
+    'camaron':          'camarón',
+    'langostino':       'langostino',
+    'mejillon':         'mejillón',
+    # Frutos secos y semillas
+    'avellana':         'avellana',
+    'avellanas':        'avellanas',
+    'almendra':         'almendra',
+    'almendras':        'almendras',
+    'nuez':             'nuez',
+    'nueces':           'nueces',
+    'castana':          'castaña',
+    'castaña':          'castaña',
+    # Condimentos
+    'cebollino':        'ciboulette',
+    'pimenton':         'pimentón',
+    'pimienta':         'pimienta',
 
     # Correcciones de estados abreviados o mal escritos del Excel original
     'crdos':           'crudos',
@@ -517,6 +575,173 @@ def _reclasificar(alimento: str, estado: str, grupo_actual: str) -> str:
     return grupo_actual
 
 
+
+
+def _agregar_alimentos_argentinos(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Agrega alimentos comunes en Argentina que no están en la tabla española original.
+    Valores nutricionales por 100g desde USDA FoodData Central y CREA Argentina.
+    Columnas por gramo (divididas por 100).
+    """
+    alimentos = [
+        # ── Frutas ──────────────────────────────────────────────────────────
+        {
+            'ALIMENTO': 'Palta', 'ESTADO': '', 'GRUPO': 'Frutas',
+            'CAL': 160, 'PR': 2.0,  'GR': 14.7, 'HC': 8.5,
+            'CA': 12,   'FE': 0.55, 'VIT_A': 7,  'VIT_C': 10.0,
+            'VIT_B1': 0.067, 'VIT_B2': 0.130, 'FIBRA': 6.7,
+        },
+        # ── Cortes de vaca argentinos ────────────────────────────────────────
+        {
+            'ALIMENTO': 'Carne picada', 'ESTADO': 'cruda', 'GRUPO': 'Carnes',
+            'CAL': 254, 'PR': 17.2, 'GR': 20.0, 'HC': 0,
+            'CA': 15,   'FE': 1.94, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.047, 'VIT_B2': 0.150, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Nalga', 'ESTADO': 'cruda', 'GRUPO': 'Carnes',
+            'CAL': 158, 'PR': 26.3, 'GR': 5.0, 'HC': 0,
+            'CA': 6,    'FE': 2.50, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.070, 'VIT_B2': 0.160, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Bola de lomo', 'ESTADO': 'cruda', 'GRUPO': 'Carnes',
+            'CAL': 165, 'PR': 25.5, 'GR': 6.2, 'HC': 0,
+            'CA': 6,    'FE': 2.40, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.065, 'VIT_B2': 0.155, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Paleta', 'ESTADO': 'cruda', 'GRUPO': 'Carnes',
+            'CAL': 215, 'PR': 20.5, 'GR': 14.0, 'HC': 0,
+            'CA': 12,   'FE': 2.70, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.058, 'VIT_B2': 0.145, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Cuadrada', 'ESTADO': 'cruda', 'GRUPO': 'Carnes',
+            'CAL': 144, 'PR': 26.9, 'GR': 3.5, 'HC': 0,
+            'CA': 5,    'FE': 2.60, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.075, 'VIT_B2': 0.165, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Asado de costilla', 'ESTADO': 'crudo', 'GRUPO': 'Carnes',
+            'CAL': 291, 'PR': 17.1, 'GR': 24.3, 'HC': 0,
+            'CA': 15,   'FE': 1.80, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.040, 'VIT_B2': 0.130, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Matambre', 'ESTADO': 'crudo', 'GRUPO': 'Carnes',
+            'CAL': 179, 'PR': 24.0, 'GR': 8.8, 'HC': 0,
+            'CA': 6,    'FE': 2.10, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.060, 'VIT_B2': 0.150, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Osobuco', 'ESTADO': 'crudo', 'GRUPO': 'Carnes',
+            'CAL': 127, 'PR': 19.8, 'GR': 4.5, 'HC': 0,
+            'CA': 18,   'FE': 1.90, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.055, 'VIT_B2': 0.140, 'FIBRA': 0,
+        },
+        # ── Aves ─────────────────────────────────────────────────────────────
+        {
+            'ALIMENTO': 'Pechuga de pollo', 'ESTADO': 'cruda', 'GRUPO': 'Aves',
+            'CAL': 165, 'PR': 31.0, 'GR': 3.6, 'HC': 0,
+            'CA': 15,   'FE': 1.04, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.082, 'VIT_B2': 0.100, 'FIBRA': 0,
+        },
+        {
+            'ALIMENTO': 'Muslo de pollo', 'ESTADO': 'crudo', 'GRUPO': 'Aves',
+            'CAL': 209, 'PR': 25.1, 'GR': 11.5, 'HC': 0,
+            'CA': 11,   'FE': 1.30, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.065, 'VIT_B2': 0.200, 'FIBRA': 0,
+        },
+        # ── Cereales argentinos ───────────────────────────────────────────────
+        {
+            'ALIMENTO': 'Arroz integral', 'ESTADO': 'crudo', 'GRUPO': 'Cereales',
+            'CAL': 370, 'PR': 7.9,  'GR': 2.9,  'HC': 77.2,
+            'CA': 23,   'FE': 1.47, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.401, 'VIT_B2': 0.093, 'FIBRA': 3.5,
+        },
+        {
+            'ALIMENTO': 'Arroz yamaní', 'ESTADO': 'crudo', 'GRUPO': 'Cereales',
+            'CAL': 362, 'PR': 8.5,  'GR': 2.7,  'HC': 75.5,
+            'CA': 20,   'FE': 1.80, 'VIT_A': 0,  'VIT_C': 0,
+            'VIT_B1': 0.450, 'VIT_B2': 0.100, 'FIBRA': 4.2,
+        },
+        # ── Hortalizas argentinas ─────────────────────────────────────────────
+        {
+            'ALIMENTO': 'Morrón rojo', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 31,  'PR': 1.0,  'GR': 0.3,  'HC': 6.0,
+            'CA': 7,    'FE': 0.43, 'VIT_A': 3131, 'VIT_C': 127.7,
+            'VIT_B1': 0.054, 'VIT_B2': 0.085, 'FIBRA': 2.1,
+        },
+        {
+            'ALIMENTO': 'Morrón verde', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 20,  'PR': 0.9,  'GR': 0.2,  'HC': 4.6,
+            'CA': 10,   'FE': 0.34, 'VIT_A': 370,  'VIT_C': 80.4,
+            'VIT_B1': 0.057, 'VIT_B2': 0.028, 'FIBRA': 1.7,
+        },
+        {
+            'ALIMENTO': 'Rúcula', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 25,  'PR': 2.6,  'GR': 0.7,  'HC': 3.7,
+            'CA': 160,  'FE': 1.46, 'VIT_A': 2373, 'VIT_C': 15.0,
+            'VIT_B1': 0.044, 'VIT_B2': 0.086, 'FIBRA': 1.6,
+        },
+        {
+            'ALIMENTO': 'Choclo', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 86,  'PR': 3.3,  'GR': 1.4,  'HC': 19.0,
+            'CA': 2,    'FE': 0.52, 'VIT_A': 187,  'VIT_C': 6.8,
+            'VIT_B1': 0.155, 'VIT_B2': 0.055, 'FIBRA': 2.0,
+        },
+        {
+            'ALIMENTO': 'Puerro', 'ESTADO': '', 'GRUPO': 'Hortalizas',
+            'CAL': 61,  'PR': 1.5,  'GR': 0.3,  'HC': 14.2,
+            'CA': 59,   'FE': 2.10, 'VIT_A': 1667, 'VIT_C': 12.0,
+            'VIT_B1': 0.060, 'VIT_B2': 0.030, 'FIBRA': 1.8,
+        },
+    ]
+
+    filas = []
+    for a in alimentos:
+        factor = 1 / 100  # convertir a por gramo
+        fila = {
+            'ALIMENTO':       a['ALIMENTO'],
+            'ESTADO':         a.get('ESTADO', ''),
+            'GRUPO':          a['GRUPO'],
+            'CAL_g':          a['CAL']    * factor,
+            'PR_g':           a['PR']     * factor,
+            'GR_g':           a['GR']     * factor,
+            'HC_g':           a['HC']     * factor,
+            'CA_g':           a['CA']     * factor,
+            'FE_g':           a['FE']     * factor,
+            'VIT_A_g':        a['VIT_A']  * factor,
+            'VIT_C_g':        a['VIT_C']  * factor,
+            'VIT_B1_g':       a['VIT_B1'] * factor,
+            'VIT_B2_g':       a['VIT_B2'] * factor,
+            'FIBRA_g':        a['FIBRA']  * factor,
+            'CAL':            a['CAL'],
+            'DISPONIBLE':     True,
+            'FUENTE':         'USDA_AR',
+        }
+        # NOMBRE_COMPLETO
+        if fila['ESTADO']:
+            nombre = f"{a['ALIMENTO']} ({a['ESTADO']})"
+        else:
+            nombre = a['ALIMENTO']
+        fila['NOMBRE_COMPLETO'] = nombre
+        filas.append(fila)
+
+    df_nuevos = pd.DataFrame(filas)
+
+    # Asegurar que todas las columnas del df original estén presentes
+    for col in df.columns:
+        if col not in df_nuevos.columns:
+            df_nuevos[col] = 0 if df[col].dtype in ['float64','int64'] else ''
+
+    df_nuevos = df_nuevos.reindex(columns=df.columns, fill_value=0)
+    df_nuevos['DISPONIBLE'] = True
+
+    return pd.concat([df, df_nuevos], ignore_index=True)
+
+
 def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     """
     Carga todas las hojas del Excel y devuelve un DataFrame unificado.
@@ -700,6 +925,10 @@ def cargar_tabla(ruta_excel: str | Path) -> pd.DataFrame:
     # Aplicar enriquecimiento USDA si existe el CSV
     df = aplicar_enriquecimiento_usda(df)
 
+    # Agregar alimentos comunes en Argentina no presentes en la tabla española
+    df = _agregar_alimentos_argentinos(df)
+
+    print('✓ Tabla lista')
     return df
 
 
